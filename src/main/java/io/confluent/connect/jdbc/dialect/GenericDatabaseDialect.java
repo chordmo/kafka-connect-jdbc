@@ -294,7 +294,8 @@ public class GenericDatabaseDialect implements DatabaseDialect {
       String query
   ) throws SQLException {
     log.trace("Creating a PreparedStatement '{}'", query);
-    PreparedStatement stmt = db.prepareStatement(query);
+    PreparedStatement stmt = db.prepareStatement(query, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+    stmt.setFetchSize(Integer.MIN_VALUE);
     initializePreparedStatement(stmt);
     return stmt;
   }
