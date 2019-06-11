@@ -61,7 +61,14 @@ public class MySqlDatabaseDialect extends GenericDatabaseDialect {
   public MySqlDatabaseDialect(AbstractConfig config) {
     super(config, new IdentifierRules(".", "`", "`"));
   }
-
+  @Override
+  public PreparedStatement createPreparedStatement(Connection db, String query) throws SQLException {
+    log.trace("Creating a PreparedStatement '{}'", query);
+    PreparedStatement stmt = db.prepareStatement(query, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+    stmt.setFetchSize(Integer.MIN_VALUE);
+    initializePreparedStatement(stmt);
+    return stmt;
+  }
   /**
    * Perform any operations on a {@link PreparedStatement} before it is used. This is called from
    * the {@link #createPreparedStatement(Connection, String)} method after the statement is
