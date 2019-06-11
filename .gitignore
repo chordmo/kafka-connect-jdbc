@@ -17,3 +17,13 @@ derby.log
 __test_database_*
 test.sqlite
 *.db-journal
+
+
+bin/
+.settings/
+.project/
+.metadata/
+.checkstyle
+.classpath
+.project
+.vscode 
