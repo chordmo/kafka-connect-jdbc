@@ -23,7 +23,12 @@ import org.apache.kafka.connect.data.Time;
 import org.apache.kafka.connect.data.Timestamp;
 import org.junit.Test;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.List;
+import java.util.Properties;
 
 import io.confluent.connect.jdbc.util.QuoteMethod;
 import io.confluent.connect.jdbc.util.TableId;
@@ -253,4 +258,30 @@ public class MySqlDatabaseDialectTest extends BaseDialectTest<MySqlDatabaseDiale
         + "user=smith&password=****&other=value"
     );
   }
+  
+  @Test
+  public void prequery() {
+    String query = " select  *  from  apply_info_data_situation";
+    
+    
+    Properties props =new Properties();
+	props.put("user", "root"); 
+	props.put("password", "123456"); 			
+	String url = "jdbc:mysql://127.0.0.1:3306/dmp?useCursorFetch=true&defaultFetchSize=1000";
+    try {
+    	Class.forName("com.mysql.jdbc.Driver");
+    	Connection db = DriverManager.getConnection(url, props);
+		PreparedStatement stmt = dialect.createPreparedStatement(db, query);
+		
+		ResultSet rs=stmt.executeQuery();  
+		while(rs.next())  
+			System.out.println(rs.getInt(1)+"  "+rs.getString(2)+"  "+rs.getString(3));  
+		db.close(); 
+	} catch (Exception e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+    
+  }
+  
 }
