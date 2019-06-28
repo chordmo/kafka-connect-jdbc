@@ -78,7 +78,6 @@ public class JdbcDbWriter {
 
   TableId destinationTable(String topic) {
     final String tableName;
-    log.info("config.tableNameReplaceTarget", config.tableNameReplaceTarget);
     if (null != config.tableNameReplaceTarget) {
       tableName = topic.replace(config.tableNameReplaceTarget, config.tableNameReplaceReplacement);
     } else {
