@@ -98,12 +98,10 @@ public class MySqlDatabaseDialectTest extends BaseDialectTest<MySqlDatabaseDiale
 
   @Test
   public void shouldBuildCreateQueryStatement() {
-    String expected =
-        "CREATE TABLE `myTable` (\n" + "`c1` INT NOT NULL,\n" + "`c2` BIGINT NOT NULL,\n" +
-        "`c3` VARCHAR(256) NOT NULL,\n" + "`c4` VARCHAR(256) NULL,\n" +
-        "`c5` DATE DEFAULT '2001-03-15',\n" + "`c6` TIME(3) DEFAULT '00:00:00.000',\n" +
-        "`c7` DATETIME(3) DEFAULT '2001-03-15 00:00:00.000',\n" + "`c8` DECIMAL(65,4) NULL,\n" +
-        "PRIMARY KEY(`c1`))";
+    String expected = "CREATE TABLE `myTable` (\n" + "`c1` INT NOT NULL,\n" + "`c2` BIGINT NOT NULL,\n"
+        + "`c3` VARCHAR(256) NOT NULL,\n" + "`c4` VARCHAR(256) NULL,\n" + "`c5` DATE DEFAULT '2001-03-15',\n"
+        + "`c6` TIME(3) DEFAULT '00:00:00.000',\n" + "`c7` DATETIME(3) DEFAULT '2001-03-15 00:00:00.000',\n"
+        + "`c8` DECIMAL(65,4) NULL,\n" + "PRIMARY KEY(`c1`))";
     String sql = dialect.buildCreateTableStatement(tableId, sinkRecordFields);
     assertEquals(expected, sql);
   }
@@ -111,58 +109,50 @@ public class MySqlDatabaseDialectTest extends BaseDialectTest<MySqlDatabaseDiale
   @Test
   public void shouldBuildAlterTableStatement() {
     List<String> statements = dialect.buildAlterTable(tableId, sinkRecordFields);
-    String[] sql = {
-        "ALTER TABLE `myTable` \n" + "ADD `c1` INT NOT NULL,\n" + "ADD `c2` BIGINT NOT NULL,\n" +
-        "ADD `c3` VARCHAR(256) NOT NULL,\n" + "ADD `c4` VARCHAR(256) NULL,\n" +
-        "ADD `c5` DATE DEFAULT '2001-03-15',\n" + "ADD `c6` TIME(3) DEFAULT '00:00:00.000',\n" +
-        "ADD `c7` DATETIME(3) DEFAULT '2001-03-15 00:00:00.000',\n" +
-        "ADD `c8` DECIMAL(65,4) NULL"};
+    String[] sql = { "ALTER TABLE `myTable` \n" + "ADD `c1` INT NOT NULL,\n" + "ADD `c2` BIGINT NOT NULL,\n"
+        + "ADD `c3` VARCHAR(256) NOT NULL,\n" + "ADD `c4` VARCHAR(256) NULL,\n"
+        + "ADD `c5` DATE DEFAULT '2001-03-15',\n" + "ADD `c6` TIME(3) DEFAULT '00:00:00.000',\n"
+        + "ADD `c7` DATETIME(3) DEFAULT '2001-03-15 00:00:00.000',\n" + "ADD `c8` DECIMAL(65,4) NULL" };
     assertStatements(sql, statements);
   }
 
   @Test
   public void shouldBuildUpsertStatement() {
-    String expected = "insert into `myTable`(`id1`,`id2`,`columnA`,`columnB`,`columnC`,`columnD`)" +
-                      " values(?,?,?,?,?,?) on duplicate key update `columnA`=values(`columnA`)," +
-                      "`columnB`=values(`columnB`),`columnC`=values(`columnC`),`columnD`=values" +
-                      "(`columnD`)";
+    String expected = "insert into `myTable`(`id1`,`id2`,`columnA`,`columnB`,`columnC`,`columnD`)"
+        + " values(?,?,?,?,?,?) on duplicate key update `columnA`=values(`columnA`),"
+        + "`columnB`=values(`columnB`),`columnC`=values(`columnC`),`columnD`=values" + "(`columnD`)";
     String sql = dialect.buildUpsertQueryStatement(tableId, pkColumns, columnsAtoD);
     assertEquals(expected, sql);
   }
 
   @Test
   public void createOneColNoPk() {
-    verifyCreateOneColNoPk(
-        "CREATE TABLE `myTable` (" + System.lineSeparator() + "`col1` INT NOT NULL)");
+    verifyCreateOneColNoPk("CREATE TABLE `myTable` (" + System.lineSeparator() + "`col1` INT NOT NULL)");
 
     quoteIdentfiiers = QuoteMethod.NEVER;
     dialect = createDialect();
 
-    verifyCreateOneColNoPk(
-        "CREATE TABLE myTable (" + System.lineSeparator() + "col1 INT NOT NULL)");
+    verifyCreateOneColNoPk("CREATE TABLE myTable (" + System.lineSeparator() + "col1 INT NOT NULL)");
   }
 
   @Test
   public void createOneColOnePk() {
-    verifyCreateOneColOnePk(
-        "CREATE TABLE `myTable` (" + System.lineSeparator() + "`pk1` INT NOT NULL," +
-        System.lineSeparator() + "PRIMARY KEY(`pk1`))");
+    verifyCreateOneColOnePk("CREATE TABLE `myTable` (" + System.lineSeparator() + "`pk1` INT NOT NULL,"
+        + System.lineSeparator() + "PRIMARY KEY(`pk1`))");
   }
 
   @Test
   public void createThreeColTwoPk() {
-    verifyCreateThreeColTwoPk(
-        "CREATE TABLE `myTable` (" + System.lineSeparator() + "`pk1` INT NOT NULL," +
-        System.lineSeparator() + "`pk2` INT NOT NULL," + System.lineSeparator() +
-        "`col1` INT NOT NULL," + System.lineSeparator() + "PRIMARY KEY(`pk1`,`pk2`))");
+    verifyCreateThreeColTwoPk("CREATE TABLE `myTable` (" + System.lineSeparator() + "`pk1` INT NOT NULL,"
+        + System.lineSeparator() + "`pk2` INT NOT NULL," + System.lineSeparator() + "`col1` INT NOT NULL,"
+        + System.lineSeparator() + "PRIMARY KEY(`pk1`,`pk2`))");
 
     quoteIdentfiiers = QuoteMethod.NEVER;
     dialect = createDialect();
 
-    verifyCreateThreeColTwoPk(
-        "CREATE TABLE myTable (" + System.lineSeparator() + "pk1 INT NOT NULL," +
-        System.lineSeparator() + "pk2 INT NOT NULL," + System.lineSeparator() +
-        "col1 INT NOT NULL," + System.lineSeparator() + "PRIMARY KEY(pk1,pk2))");
+    verifyCreateThreeColTwoPk("CREATE TABLE myTable (" + System.lineSeparator() + "pk1 INT NOT NULL,"
+        + System.lineSeparator() + "pk2 INT NOT NULL," + System.lineSeparator() + "col1 INT NOT NULL,"
+        + System.lineSeparator() + "PRIMARY KEY(pk1,pk2))");
   }
 
   @Test
@@ -172,41 +162,37 @@ public class MySqlDatabaseDialectTest extends BaseDialectTest<MySqlDatabaseDiale
 
   @Test
   public void alterAddTwoCol() {
-    verifyAlterAddTwoCols(
-        "ALTER TABLE `myTable` " + System.lineSeparator() + "ADD `newcol1` INT NULL," +
-        System.lineSeparator() + "ADD `newcol2` INT DEFAULT 42");
+    verifyAlterAddTwoCols("ALTER TABLE `myTable` " + System.lineSeparator() + "ADD `newcol1` INT NULL,"
+        + System.lineSeparator() + "ADD `newcol2` INT DEFAULT 42");
   }
 
   @Test
   public void upsert() {
     TableId actor = tableId("actor");
-    String expected = "insert into `actor`(`actor_id`,`first_name`,`last_name`,`score`) " +
-                      "values(?,?,?,?) on duplicate key update `first_name`=values(`first_name`)," +
-                      "`last_name`=values(`last_name`),`score`=values(`score`)";
+    String expected = "insert into `actor`(`actor_id`,`first_name`,`last_name`,`score`) "
+        + "values(?,?,?,?) on duplicate key update `first_name`=values(`first_name`),"
+        + "`last_name`=values(`last_name`),`score`=values(`score`)";
     String sql = dialect.buildUpsertQueryStatement(actor, columns(actor, "actor_id"),
-                                                   columns(actor, "first_name", "last_name",
-                                                           "score"));
+        columns(actor, "first_name", "last_name", "score"));
     assertEquals(expected, sql);
 
     quoteIdentfiiers = QuoteMethod.NEVER;
     dialect = createDialect();
 
-    expected = "insert into actor(actor_id,first_name,last_name,score) " +
-               "values(?,?,?,?) on duplicate key update first_name=values(first_name)," +
-               "last_name=values(last_name),score=values(score)";
+    expected = "insert into actor(actor_id,first_name,last_name,score) "
+        + "values(?,?,?,?) on duplicate key update first_name=values(first_name),"
+        + "last_name=values(last_name),score=values(score)";
     sql = dialect.buildUpsertQueryStatement(actor, columns(actor, "actor_id"),
-        columns(actor, "first_name", "last_name",
-            "score"));
+        columns(actor, "first_name", "last_name", "score"));
     assertEquals(expected, sql);
   }
 
   @Test
   public void upsertOnlyKeyCols() {
     TableId actor = tableId("actor");
-    String expected = "insert into `actor`(`actor_id`) " +
-                      "values(?) on duplicate key update `actor_id`=values(`actor_id`)";
-    String sql = dialect
-        .buildUpsertQueryStatement(actor, columns(actor, "actor_id"), columns(actor));
+    String expected = "insert into `actor`(`actor_id`) "
+        + "values(?) on duplicate key update `actor_id`=values(`actor_id`)";
+    String sql = dialect.buildUpsertQueryStatement(actor, columns(actor, "actor_id"), columns(actor));
     assertEquals(expected, sql);
   }
 
@@ -215,73 +201,65 @@ public class MySqlDatabaseDialectTest extends BaseDialectTest<MySqlDatabaseDiale
     TableId customers = tableId("customers");
     String expected = "INSERT INTO `customers`(`age`,`firstName`,`lastName`) VALUES(?,?,?)";
     String sql = dialect.buildInsertStatement(customers, columns(customers),
-                                              columns(customers, "age", "firstName", "lastName"));
+        columns(customers, "age", "firstName", "lastName"));
     assertEquals(expected, sql);
   }
 
   @Test
   public void update() {
     TableId customers = tableId("customers");
-    String expected =
-        "UPDATE `customers` SET `age` = ?, `firstName` = ?, `lastName` = ? WHERE " + "`id` = ?";
+    String expected = "UPDATE `customers` SET `age` = ?, `firstName` = ?, `lastName` = ? WHERE " + "`id` = ?";
     String sql = dialect.buildUpdateStatement(customers, columns(customers, "id"),
-                                              columns(customers, "age", "firstName", "lastName"));
+        columns(customers, "age", "firstName", "lastName"));
     assertEquals(expected, sql);
   }
 
   @Test
   public void shouldSanitizeUrlWithCredentialsInHosts() {
-    assertSanitizedUrl(
-        "mysqlx://sandy:secret@(host=myhost1,port=1111)/db?key1=value1",
-        "mysqlx://sandy:****@(host=myhost1,port=1111)/db?key1=value1"
-    );
+    assertSanitizedUrl("mysqlx://sandy:secret@(host=myhost1,port=1111)/db?key1=value1",
+        "mysqlx://sandy:****@(host=myhost1,port=1111)/db?key1=value1");
   }
 
   @Test
   public void shouldSanitizeUrlWithCredentialsInProperties() {
     assertSanitizedUrl(
         "jdbc:mysql://[(host=myhost1,port=1111,user=sandy,password=secret),"
-        + "(password=secret,host=myhost2,port=2222,user=finn,password=secret)]/db",
+            + "(password=secret,host=myhost2,port=2222,user=finn,password=secret)]/db",
         "jdbc:mysql://[(host=myhost1,port=1111,user=sandy,password=****),"
-        + "(password=****,host=myhost2,port=2222,user=finn,password=****)]/db"
-    );
+            + "(password=****,host=myhost2,port=2222,user=finn,password=****)]/db");
   }
 
   @Test
   public void shouldSanitizeUrlWithCredentialsInUrlProperties() {
     assertSanitizedUrl(
         "jdbc:mysql://(host=myhost1,port=1111),(host=myhost2,port=2222)/"
-        + "db?password=secret&key1=value1&key2=value2&key3=value3&"
-        + "user=smith&password=secret&other=value",
+            + "db?password=secret&key1=value1&key2=value2&key3=value3&" + "user=smith&password=secret&other=value",
         "jdbc:mysql://(host=myhost1,port=1111),(host=myhost2,port=2222)/"
-        + "db?password=****&key1=value1&key2=value2&key3=value3&"
-        + "user=smith&password=****&other=value"
-    );
+            + "db?password=****&key1=value1&key2=value2&key3=value3&" + "user=smith&password=****&other=value");
   }
-  
+
   @Test
   public void prequery() {
     String query = " select  *  from  apply_info_data_situation";
-    
-    
-    Properties props =new Properties();
-	props.put("user", "root"); 
-	props.put("password", "123456"); 			
-	String url = "jdbc:mysql://127.0.0.1:3306/dmp?useCursorFetch=true&defaultFetchSize=1000";
+
+    Properties props = new Properties();
+    props.put("user", "root");
+    props.put("password", "123456");
+    String url = "jdbc:mysql://127.0.0.1:3306/testdb?useCursorFetch=true&defaultFetchSize=1000";
     try {
-    	Class.forName("com.mysql.jdbc.Driver");
-    	Connection db = DriverManager.getConnection(url, props);
-		PreparedStatement stmt = dialect.createPreparedStatement(db, query);
-		
-		ResultSet rs=stmt.executeQuery();  
-		while(rs.next())  
-			System.out.println(rs.getInt(1)+"  "+rs.getString(2)+"  "+rs.getString(3));  
-		db.close(); 
-	} catch (Exception e) {
-		// TODO Auto-generated catch block
-		e.printStackTrace();
-	}
-    
+      Class.forName("com.mysql.jdbc.Driver");
+      Connection db = DriverManager.getConnection(url, props);
+      PreparedStatement stmt = dialect.createPreparedStatement(db, query);
+
+      ResultSet rs = stmt.executeQuery();
+      while (rs.next())
+        System.out.println(rs.getInt(1) + "  " + rs.getString(2) + "  " + rs.getString(3));
+      db.close();
+    } catch (Exception e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+
   }
-  
+
 }
