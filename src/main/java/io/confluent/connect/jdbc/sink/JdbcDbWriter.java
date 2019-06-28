@@ -78,10 +78,10 @@ public class JdbcDbWriter {
 
   TableId destinationTable(String topic) {
     final String tableName;
-    if (null != config.tableNameReplaceTarget) {
-      tableName = topic.replace(config.tableNameReplaceTarget, config.tableNameReplaceReplacement);
-    } else {
+    if (config.tableNameReplaceTarget.isEmpty()) {
       tableName = config.tableNameFormat.replace("${topic}", topic);
+    } else {
+      tableName = topic.replace(config.tableNameReplaceTarget, config.tableNameReplaceReplacement);
     }
     if (tableName.isEmpty()) {
       throw new ConnectException(String.format(

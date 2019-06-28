@@ -76,7 +76,7 @@ public class JdbcSinkConfig extends AbstractConfig {
 
         // target, replacement
         public static final String TABLE_NAME_REPLACE_TARGET = "table.name.replace.target";
-        private static final String TABLE_NAME_REPLACE_TARGET_DEFAULT = null;
+        private static final String TABLE_NAME_REPLACE_TARGET_DEFAULT = "";
         private static final String TABLE_NAME_REPLACE_TARGET_DOC =
                         "${topic}.replace(target,replacement)";
         private static final String TABLE_NAME_REPLACE_TARGET_DISPLAY = "Table Name replace";
