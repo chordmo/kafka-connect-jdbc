@@ -20,3 +20,4 @@ test.sqlite
 
 bin/
 .settings
+.metadata
