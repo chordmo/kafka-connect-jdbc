@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.confluent.connect.jdbc.dialect.DatabaseDialect;
+import io.confluent.connect.jdbc.dialect.MySqlDatabaseDialect;
 import io.confluent.connect.jdbc.source.EmbeddedDerby;
 import io.confluent.connect.jdbc.source.JdbcSourceConnectorConfig;
 import io.confluent.connect.jdbc.source.JdbcSourceTask;
@@ -48,7 +49,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({JdbcSourceConnector.class, DatabaseDialect.class})
+//@PrepareForTest({JdbcSourceConnector.class, DatabaseDialect.class})
+@PrepareForTest({JdbcSourceConnector.class, MySqlDatabaseDialect.class})
 @PowerMockIgnore("javax.management.*")
 public class JdbcSourceConnectorTest {
 
@@ -62,11 +64,19 @@ public class JdbcSourceConnectorTest {
   @Before
   public void setup() {
     connector = new JdbcSourceConnector();
-    db = new EmbeddedDerby();
+//    db = new EmbeddedDerby();
     connProps = new HashMap<>();
-    connProps.put(JdbcSourceConnectorConfig.CONNECTION_URL_CONFIG, db.getUrl());
+//    connProps.put(JdbcSourceConnectorConfig.CONNECTION_URL_CONFIG, db.getUrl());
+    connProps.put(JdbcSourceConnectorConfig.CONNECTION_URL_CONFIG, "jdbc:mysql://node1:3306/kafka_test");
     connProps.put(JdbcSourceConnectorConfig.MODE_CONFIG, JdbcSourceConnectorConfig.MODE_BULK);
     connProps.put(JdbcSourceConnectorConfig.TOPIC_PREFIX_CONFIG, "test-");
+    connProps.put(JdbcSourceConnectorConfig.CONNECTION_USER_CONFIG, "root");
+    connProps.put(JdbcSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG, "passw0rd");
+    connProps.put(JdbcSourceConnectorConfig.CATALOG_PATTERN_CONFIG, "kafka_test");
+    
+//    connProps.put(JdbcSourceConnectorConfig.DIALECT_NAME_CONFIG, "fuck_test");
+    
+    
   }
 
   @After
@@ -105,7 +115,8 @@ public class JdbcSourceConnectorTest {
     CachedConnectionProvider mockCachedConnectionProvider = PowerMock.createMock(CachedConnectionProvider.class);
     PowerMock.expectNew(
         CachedConnectionProvider.class,
-        EasyMock.anyObject(DatabaseDialect.class),
+//        EasyMock.anyObject(DatabaseDialect.class),
+        EasyMock.anyObject(MySqlDatabaseDialect.class),
         EasyMock.eq(JdbcSourceConnectorConfig.CONNECTION_ATTEMPTS_DEFAULT),
         EasyMock.eq(JdbcSourceConnectorConfig.CONNECTION_BACKOFF_DEFAULT))
              .andReturn(mockCachedConnectionProvider);
