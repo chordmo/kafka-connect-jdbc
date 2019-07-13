@@ -40,6 +40,9 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
 
   private final Logger log = LoggerFactory.getLogger(getClass()); // use concrete subclass
 
+  // 添加了自定义增量的开始节点id
+  protected TimestampIncrementingCriteria criteria;
+
   protected final DatabaseDialect dialect;
   protected final QueryMode mode;
   protected final String query;

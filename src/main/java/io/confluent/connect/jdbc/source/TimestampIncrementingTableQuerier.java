@@ -1,16 +1,15 @@
 /*
  * Copyright 2018 Confluent Inc.
  *
- * Licensed under the Confluent Community License (the "License"); you may not use
- * this file except in compliance with the License.  You may obtain a copy of the
- * License at
+ * Licensed under the Confluent Community License (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
  *
  * http://www.confluent.io/confluent-community-license
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OF ANY KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and limitations under the
+ * License.
  */
 
 package io.confluent.connect.jdbc.source;
@@ -21,7 +20,6 @@ import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -31,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
 import io.confluent.connect.jdbc.dialect.DatabaseDialect;
 import io.confluent.connect.jdbc.source.SchemaMapping.FieldSetter;
 import io.confluent.connect.jdbc.source.TimestampIncrementingCriteria.CriteriaValues;
@@ -42,46 +39,42 @@ import io.confluent.connect.jdbc.util.ExpressionBuilder;
 
 /**
  * <p>
- *   TimestampIncrementingTableQuerier performs incremental loading of data using two mechanisms: a
- *   timestamp column provides monotonically incrementing values that can be used to detect new or
- *   modified rows and a strictly incrementing (e.g. auto increment) column allows detecting new
- *   rows or combined with the timestamp provide a unique identifier for each update to the row.
+ * TimestampIncrementingTableQuerier performs incremental loading of data using two mechanisms: a
+ * timestamp column provides monotonically incrementing values that can be used to detect new or
+ * modified rows and a strictly incrementing (e.g. auto increment) column allows detecting new rows
+ * or combined with the timestamp provide a unique identifier for each update to the row.
  * </p>
  * <p>
- *   At least one of the two columns must be specified (or left as "" for the incrementing column
- *   to indicate use of an auto-increment column). If both columns are provided, they are both
- *   used to ensure only new or updated rows are reported and to totally order updates so
- *   recovery can occur no matter when offsets were committed. If only the incrementing fields is
- *   provided, new rows will be detected but not updates. If only the timestamp field is
- *   provided, both new and updated rows will be detected, but stream offsets will not be unique
- *   so failures may cause duplicates or losses.
+ * At least one of the two columns must be specified (or left as "" for the incrementing column to
+ * indicate use of an auto-increment column). If both columns are provided, they are both used to
+ * ensure only new or updated rows are reported and to totally order updates so recovery can occur
+ * no matter when offsets were committed. If only the incrementing fields is provided, new rows will
+ * be detected but not updates. If only the timestamp field is provided, both new and updated rows
+ * will be detected, but stream offsets will not be unique so failures may cause duplicates or
+ * losses.
  * </p>
  */
 public class TimestampIncrementingTableQuerier extends TableQuerier implements CriteriaValues {
-  private static final Logger log = LoggerFactory.getLogger(
-      TimestampIncrementingTableQuerier.class
-  );
-
+  private static final Logger log =
+      LoggerFactory.getLogger(TimestampIncrementingTableQuerier.class);
+  private long startId;
   private final List<String> timestampColumnNames;
   private final List<ColumnId> timestampColumns;
   private String incrementingColumnName;
   private long timestampDelay;
   private TimestampIncrementingOffset offset;
-  private TimestampIncrementingCriteria criteria;
+
   private final Map<String, String> partition;
   private final String topic;
   private final TimeZone timeZone;
 
   public TimestampIncrementingTableQuerier(DatabaseDialect dialect, QueryMode mode, String name,
-                                           String topicPrefix,
-                                           List<String> timestampColumnNames,
-                                           String incrementingColumnName,
-                                           Map<String, Object> offsetMap, Long timestampDelay,
-                                           TimeZone timeZone) {
+      String topicPrefix, List<String> timestampColumnNames, String incrementingColumnName,
+      Map<String, Object> offsetMap, Long timestampDelay, TimeZone timeZone, long startId) {
     super(dialect, mode, name, topicPrefix);
     this.incrementingColumnName = incrementingColumnName;
-    this.timestampColumnNames = timestampColumnNames != null
-                                ? timestampColumnNames : Collections.<String>emptyList();
+    this.timestampColumnNames =
+        timestampColumnNames != null ? timestampColumnNames : Collections.<String>emptyList();
     this.timestampDelay = timestampDelay;
     this.offset = TimestampIncrementingOffset.fromMap(offsetMap);
 
@@ -108,6 +101,7 @@ public class TimestampIncrementingTableQuerier extends TableQuerier implements C
     }
 
     this.timeZone = timeZone;
+    this.startId = startId;
   }
 
   @Override
@@ -146,12 +140,8 @@ public class TimestampIncrementingTableQuerier extends TableQuerier implements C
     // Default when unspecified uses an autoincrementing column
     if (incrementingColumnName != null && incrementingColumnName.isEmpty()) {
       // Find the first auto-incremented column ...
-      for (ColumnDefinition defn : dialect.describeColumns(
-          db,
-          tableId.catalogName(),
-          tableId.schemaName(),
-          tableId.tableName(),
-          null).values()) {
+      for (ColumnDefinition defn : dialect.describeColumns(db, tableId.catalogName(),
+          tableId.schemaName(), tableId.tableName(), null).values()) {
         if (defn.isAutoIncrement()) {
           incrementingColumnName = defn.id().name();
           break;
@@ -194,16 +184,20 @@ public class TimestampIncrementingTableQuerier extends TableQuerier implements C
   }
 
   @Override
+  public long startId() throws SQLException {
+    return this.startId;
+  }
+
+  @Override
   public Timestamp beginTimetampValue() {
     return offset.getTimestampOffset();
   }
 
   @Override
-  public Timestamp endTimetampValue()  throws SQLException {
-    final long currentDbTime = dialect.currentTimeOnDB(
-        stmt.getConnection(),
-        DateTimeUtils.getTimeZoneCalendar(timeZone)
-    ).getTime();
+  public Timestamp endTimetampValue() throws SQLException {
+    final long currentDbTime =
+        dialect.currentTimeOnDB(stmt.getConnection(), DateTimeUtils.getTimeZoneCalendar(timeZone))
+            .getTime();
     return new Timestamp(currentDbTime - timestampDelay);
   }
 
@@ -214,14 +208,9 @@ public class TimestampIncrementingTableQuerier extends TableQuerier implements C
 
   @Override
   public String toString() {
-    return "TimestampIncrementingTableQuerier{"
-           + "table=" + tableId
-           + ", query='" + query + '\''
-           + ", topicPrefix='" + topicPrefix + '\''
-           + ", incrementingColumn='" + (incrementingColumnName != null
-                                        ? incrementingColumnName
-                                        : "") + '\''
-           + ", timestampColumns=" + timestampColumnNames
-           + '}';
+    return "TimestampIncrementingTableQuerier{" + "table=" + tableId + ", query='" + query + '\''
+        + ", topicPrefix='" + topicPrefix + '\'' + ", incrementingColumn='"
+        + (incrementingColumnName != null ? incrementingColumnName : "") + '\''
+        + ", timestampColumns=" + timestampColumnNames + '}';
   }
 }

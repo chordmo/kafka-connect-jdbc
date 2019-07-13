@@ -113,8 +113,8 @@ public abstract class DatabaseDialectProvider {
    *
    * @param jdbcInfo the information about the JDBC connection URL; may not be null
    * @return the score; may be {@link #NO_MATCH_SCORE} if the dialect does not
-   *     apply, or greater than or equal to {@link #NO_MATCH_SCORE} if the DatabaseDialect
-   *     can be used with this connection.
+   * apply, or greater than or equal to {@link #NO_MATCH_SCORE} if the DatabaseDialect
+   * can be used with this connection.
    */
   public abstract int score(JdbcUrlInfo jdbcInfo);
 
@@ -150,15 +150,15 @@ public abstract class DatabaseDialectProvider {
     private final Set<String> subprotocols;
 
     protected SubprotocolBasedProvider(
-        String name,
-        final String... subprotocols
+            String name,
+            final String... subprotocols
     ) {
       this(name, Arrays.asList(subprotocols));
     }
 
     protected SubprotocolBasedProvider(
-        String name,
-        final Collection<String> subprotocols
+            String name,
+            final Collection<String> subprotocols
     ) {
       super(name);
       this.subprotocols = new HashSet<>(subprotocols);
@@ -192,8 +192,8 @@ public abstract class DatabaseDialectProvider {
     private final int score;
 
     protected FixedScoreProvider(
-        String name,
-        int score
+            String name,
+            int score
     ) {
       super(name);
       this.score = score;

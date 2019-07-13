@@ -74,20 +74,6 @@ public class JdbcSinkConfig extends AbstractConfig {
 
         // public static final String TABLE_NAME_REPLACE = "table.name.replace";
 
-        // target, replacement
-        public static final String TABLE_NAME_REPLACE_TARGET = "table.name.replace.target";
-        private static final String TABLE_NAME_REPLACE_TARGET_DEFAULT = "";
-        private static final String TABLE_NAME_REPLACE_TARGET_DOC =
-                        "${topic}.replace(target,replacement)";
-        private static final String TABLE_NAME_REPLACE_TARGET_DISPLAY = "Table Name replace";
-
-        public static final String TABLE_NAME_REPLACE_REPLACEMENT =
-                        "table.name.replace.replacement";
-        private static final String TABLE_NAME_REPLACE_REPLACEMENT_DEFAULT = "";
-        private static final String TABLE_NAME_REPLACE_REPLACEMENT_DOC =
-                        "${topic}.replace(target,replacement)";
-        private static final String TABLE_NAME_REPLACE_REPLACEMENT_DISPLAY = "Table Name replace";
-
         public static final String MAX_RETRIES = "max.retries";
         private static final int MAX_RETRIES_DEFAULT = 10;
         private static final String MAX_RETRIES_DOC =
@@ -211,6 +197,20 @@ public class JdbcSinkConfig extends AbstractConfig {
         private static final EnumRecommender QUOTE_METHOD_RECOMMENDER =
                         EnumRecommender.in(QuoteMethod.values());
 
+        // target, replacement
+        public static final String TABLE_NAME_REPLACE_TARGET = "table.name.replace.target";
+        private static final String TABLE_NAME_REPLACE_TARGET_DEFAULT = "";
+        private static final String TABLE_NAME_REPLACE_TARGET_DOC =
+                        "${topic}.replace(target,replacement)";
+        private static final String TABLE_NAME_REPLACE_TARGET_DISPLAY = "Table Name replace";
+
+        public static final String TABLE_NAME_REPLACE_REPLACEMENT =
+                        "table.name.replace.replacement";
+        private static final String TABLE_NAME_REPLACE_REPLACEMENT_DEFAULT = "";
+        private static final String TABLE_NAME_REPLACE_REPLACEMENT_DOC =
+                        "${topic}.replace(target,replacement)";
+        private static final String TABLE_NAME_REPLACE_REPLACEMENT_DISPLAY = "Table Name replace";
+
         public static final ConfigDef CONFIG_DEF = new ConfigDef()
                         // Connection
                         .define(CONNECTION_URL, ConfigDef.Type.STRING, ConfigDef.NO_DEFAULT_VALUE,
@@ -297,8 +297,6 @@ public class JdbcSinkConfig extends AbstractConfig {
         public final String connectionUser;
         public final String connectionPassword;
         public final String tableNameFormat;
-        public final String tableNameReplaceTarget;
-        public final String tableNameReplaceReplacement;
         public final int batchSize;
         public final int maxRetries;
         public final int retryBackoffMs;
@@ -310,6 +308,8 @@ public class JdbcSinkConfig extends AbstractConfig {
         public final Set<String> fieldsWhitelist;
         public final String dialectName;
         public final TimeZone timeZone;
+        public final String tableNameReplaceTarget;
+        public final String tableNameReplaceReplacement;
 
         public JdbcSinkConfig(Map<?, ?> props) {
                 super(CONFIG_DEF, props);
