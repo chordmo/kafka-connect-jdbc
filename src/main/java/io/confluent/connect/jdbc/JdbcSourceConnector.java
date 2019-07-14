@@ -91,7 +91,7 @@ public class JdbcSourceConnector extends SourceConnector {
     Set<String> whitelistSet = whitelist.isEmpty() ? null : new HashSet<>(whitelist);
     List<String> blacklist = config.getList(JdbcSourceConnectorConfig.TABLE_BLACKLIST_CONFIG);
     Set<String> blacklistSet = blacklist.isEmpty() ? null : new HashSet<>(blacklist);
-    long startId = config.getLong(JdbcSourceTaskConfig.INCREMENTING_START_ID_CONFIG);
+    long startId = config.getLong(JdbcSourceTaskConfig.INCREMENTING_BEGIN_CONFIG);
     log.info("------------------JdbcSourceConnector------------------", Long.toString(startId));
     if (whitelistSet != null && blacklistSet != null) {
       throw new ConnectException(JdbcSourceConnectorConfig.TABLE_WHITELIST_CONFIG + " and "

@@ -15,21 +15,18 @@
 package io.confluent.connect.jdbc.source;
 
 import java.util.TimeZone;
-
 import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Collections;
 import java.util.List;
-
 import io.confluent.connect.jdbc.util.ColumnId;
 import io.confluent.connect.jdbc.util.DateTimeUtils;
 import io.confluent.connect.jdbc.util.ExpressionBuilder;
@@ -44,11 +41,19 @@ public class TimestampIncrementingCriteria {
    */
   public interface CriteriaValues {
     /**
-     * Start ID 增量采集的时候给一个开始ID
-     * 这个用于自定义增量采集的开始ID
-     * 提供这个值就用代替Kafka里面的增量开始ID
+     * 自定义开始ID Start ID 增量采集的时候给一个开始ID 这个用于自定义增量采集的开始ID 提供这个值就用代替Kafka里面的增量开始ID
      */
     long startId() throws SQLException;
+
+    /**
+     * 自定义开始时间 开始的增量时间
+     */
+    long timestampBegin() throws SQLException;
+
+    /**
+     * 自定义结束时间 结束的增量时间
+     */
+    long timestampEnd() throws SQLException;
 
     /**
      * Get the beginning of the time period.
@@ -84,9 +89,9 @@ public class TimestampIncrementingCriteria {
 
 
   public TimestampIncrementingCriteria(ColumnId incrementingColumn, List<ColumnId> timestampColumns,
-                                       TimeZone timeZone) {
+      TimeZone timeZone) {
     this.timestampColumns =
-            timestampColumns != null ? timestampColumns : Collections.<ColumnId>emptyList();
+        timestampColumns != null ? timestampColumns : Collections.<ColumnId>emptyList();
     this.incrementingColumn = incrementingColumn;
     this.timeZone = timeZone;
   }
@@ -123,7 +128,7 @@ public class TimestampIncrementingCriteria {
    * @throws SQLException if there is a problem using the prepared statement
    */
   public void setQueryParameters(PreparedStatement stmt, CriteriaValues values)
-          throws SQLException {
+      throws SQLException {
     if (hasTimestampColumns() && hasIncrementedColumn()) {
       setQueryParametersTimestampIncrementing(stmt, values);
     } else if (hasTimestampColumns()) {
@@ -134,23 +139,34 @@ public class TimestampIncrementingCriteria {
   }
 
   protected void setQueryParametersTimestampIncrementing(PreparedStatement stmt,
-                                                         CriteriaValues values) throws SQLException {
+      CriteriaValues values) throws SQLException {
     Timestamp beginTime = values.beginTimetampValue();
     Timestamp endTime = values.endTimetampValue();
     Long incOffset = values.lastIncrementedValue();
+
+    if (-1 != values.startId()) {
+      incOffset = values.startId();
+    }
+    if (-1 != values.timestampBegin()) {
+      beginTime = new Timestamp(values.timestampBegin());
+    }
+    if (-1 != values.timestampEnd()) {
+      endTime = new Timestamp(values.timestampEnd());
+    }
+
     stmt.setTimestamp(1, endTime, DateTimeUtils.getTimeZoneCalendar(timeZone));
     stmt.setTimestamp(2, beginTime, DateTimeUtils.getTimeZoneCalendar(timeZone));
     stmt.setLong(3, incOffset);
     stmt.setTimestamp(4, beginTime, DateTimeUtils.getTimeZoneCalendar(timeZone));
     log.debug(
-            "Executing prepared statement with start time value = {} end time = {} and incrementing"
-                    + " value = {}",
-            DateTimeUtils.formatTimestamp(beginTime, timeZone),
-            DateTimeUtils.formatTimestamp(endTime, timeZone), incOffset);
+        "Executing prepared statement with start time value = {} end time = {} and incrementing"
+            + " value = {}",
+        DateTimeUtils.formatTimestamp(beginTime, timeZone),
+        DateTimeUtils.formatTimestamp(endTime, timeZone), incOffset);
   }
 
   protected void setQueryParametersIncrementing(PreparedStatement stmt, CriteriaValues values)
-          throws SQLException {
+      throws SQLException {
     Long incOffset = values.lastIncrementedValue();
     if (-1 != values.startId()) {
       incOffset = values.startId();
@@ -159,15 +175,24 @@ public class TimestampIncrementingCriteria {
     log.info("Executing prepared statement with incrementing value = {}", incOffset);
   }
 
+
   protected void setQueryParametersTimestamp(PreparedStatement stmt, CriteriaValues values)
-          throws SQLException {
+      throws SQLException {
     Timestamp beginTime = values.beginTimetampValue();
     Timestamp endTime = values.endTimetampValue();
+
+    if (-1 != values.timestampBegin()) {
+      beginTime = new Timestamp(values.timestampBegin());
+    }
+    if (-1 != values.timestampEnd()) {
+      endTime = new Timestamp(values.timestampEnd());
+    }
+
     stmt.setTimestamp(1, beginTime, DateTimeUtils.getTimeZoneCalendar(timeZone));
     stmt.setTimestamp(2, endTime, DateTimeUtils.getTimeZoneCalendar(timeZone));
-    log.debug("Executing prepared statement with timestamp value = {} end time = {}",
-            DateTimeUtils.formatTimestamp(beginTime, timeZone),
-            DateTimeUtils.formatTimestamp(endTime, timeZone));
+    log.info("Executing prepared statement with timestamp value = {} end time = {}",
+        DateTimeUtils.formatTimestamp(beginTime, timeZone),
+        DateTimeUtils.formatTimestamp(endTime, timeZone));
   }
 
   /**
@@ -178,12 +203,12 @@ public class TimestampIncrementingCriteria {
    * @return the timestamp for this row; may not be null
    */
   public TimestampIncrementingOffset extractValues(Schema schema, Struct record,
-                                                   TimestampIncrementingOffset previousOffset) {
+      TimestampIncrementingOffset previousOffset) {
     Timestamp extractedTimestamp = null;
     if (hasTimestampColumns()) {
       extractedTimestamp = extractOffsetTimestamp(schema, record);
       assert previousOffset == null || (previousOffset.getTimestampOffset() != null
-              && previousOffset.getTimestampOffset().compareTo(extractedTimestamp) <= 0);
+          && previousOffset.getTimestampOffset().compareTo(extractedTimestamp) <= 0);
     }
     Long extractedId = null;
     if (hasIncrementedColumn()) {
@@ -192,7 +217,7 @@ public class TimestampIncrementingCriteria {
       // If we are only using an incrementing column, then this must be incrementing.
       // If we are also using a timestamp, then we may see updates to older rows.
       assert previousOffset == null || previousOffset.getIncrementingOffset() == -1L
-              || extractedId > previousOffset.getIncrementingOffset() || hasTimestampColumns();
+          || extractedId > previousOffset.getIncrementingOffset() || hasTimestampColumns();
     }
     return new TimestampIncrementingOffset(extractedTimestamp, extractedId);
   }
@@ -227,15 +252,15 @@ public class TimestampIncrementingCriteria {
     final Object incrementingColumnValue = record.get(incrementingColumn.name());
     if (incrementingColumnValue == null) {
       throw new ConnectException(
-              "Null value for incrementing column of type: " + incrementingColumnSchema.type());
+          "Null value for incrementing column of type: " + incrementingColumnSchema.type());
     } else if (isIntegralPrimitiveType(incrementingColumnValue)) {
       extractedId = ((Number) incrementingColumnValue).longValue();
     } else if (incrementingColumnSchema.name() != null
-            && incrementingColumnSchema.name().equals(Decimal.LOGICAL_NAME)) {
+        && incrementingColumnSchema.name().equals(Decimal.LOGICAL_NAME)) {
       extractedId = extractDecimalId(incrementingColumnValue);
     } else {
       throw new ConnectException(
-              "Invalid type for incrementing column: " + incrementingColumnSchema.type());
+          "Invalid type for incrementing column: " + incrementingColumnSchema.type());
     }
     log.trace("Extracted incrementing column value: {}", extractedId);
     return extractedId;
@@ -254,7 +279,7 @@ public class TimestampIncrementingCriteria {
 
   protected boolean isIntegralPrimitiveType(Object incrementingColumnValue) {
     return incrementingColumnValue instanceof Long || incrementingColumnValue instanceof Integer
-            || incrementingColumnValue instanceof Short || incrementingColumnValue instanceof Byte;
+        || incrementingColumnValue instanceof Short || incrementingColumnValue instanceof Byte;
   }
 
   protected String coalesceTimestampColumns(ExpressionBuilder builder) {

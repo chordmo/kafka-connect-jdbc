@@ -151,8 +151,12 @@ public class JdbcSourceTask extends SourceTask {
             = config.getBoolean(JdbcSourceTaskConfig.VALIDATE_NON_NULL_CONFIG);
     TimeZone timeZone = config.timeZone();
 
-    long startId = config.getLong(JdbcSourceTaskConfig.INCREMENTING_START_ID_CONFIG);
+    long startId = config.getLong(JdbcSourceTaskConfig.INCREMENTING_BEGIN_CONFIG);
     log.info("------------------JdbcSourceTask------------------", Long.toString(startId));
+    long timestampBegin = config.getLong(JdbcSourceTaskConfig.TIMESTAMP_BEGIN_CONFIG);
+    log.info("------------------JdbcSourceTask------------------", Long.toString(timestampBegin));
+    long timestampEnd = config.getLong(JdbcSourceTaskConfig.TIMESTAMP_END_CONFIG);
+    log.info("------------------JdbcSourceTask------------------", Long.toString(timestampEnd));
     for (String tableOrQuery : tablesOrQuery) {
       final List<Map<String, String>> tablePartitionsToCheck;
       final Map<String, String> partition;
@@ -212,7 +216,9 @@ public class JdbcSourceTask extends SourceTask {
                         offset,
                         timestampDelayInterval,
                         timeZone,
-                        startId
+                        startId,
+                        timestampBegin,
+                        timestampEnd
                 )
         );
       } else if (mode.equals(JdbcSourceTaskConfig.MODE_TIMESTAMP)) {
@@ -227,7 +233,9 @@ public class JdbcSourceTask extends SourceTask {
                         offset,
                         timestampDelayInterval,
                         timeZone,
-                        startId
+                        startId,
+                        timestampBegin,
+                        timestampEnd
                 )
         );
       } else if (mode.endsWith(JdbcSourceTaskConfig.MODE_TIMESTAMP_INCREMENTING)) {
@@ -242,7 +250,9 @@ public class JdbcSourceTask extends SourceTask {
                         offset,
                         timestampDelayInterval,
                         timeZone,
-                        startId
+                        startId,
+                        timestampBegin,
+                        timestampEnd
                 )
         );
       }

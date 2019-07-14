@@ -276,10 +276,21 @@ public class JdbcSourceConnectorConfig extends AbstractConfig {
           + "In most cases it only makes sense to have either TABLE or VIEW.";
   private static final String TABLE_TYPE_DISPLAY = "Table Types";
 
-  public static final String INCREMENTING_START_ID_CONFIG = "incrementing.start.id";
-  private static final String INCREMENTING_START_ID_DOC = "Customize the starting id";
-  public static final long INCREMENTING_START_ID_DEFAULT = -1;
-  private static final String INCREMENTING_START_ID_DISPLAY = "incrementing start id";
+  public static final String INCREMENTING_BEGIN_CONFIG = "incrementing.begin";
+  private static final String INCREMENTING_BEGIN_DOC = "Customize the begining";
+  public static final long INCREMENTING_BEGIN_DEFAULT = -1;
+  private static final String INCREMENTING_BEGIN_DISPLAY = "incrementing begin";
+
+
+  public static final String TIMESTAMP_BEGIN_CONFIG = "timestamp.begin";
+  private static final String TIMESTAMP_BEGIN_DOC = "begin timestamp";
+  public static final long TIMESTAMP_BEGIN_DEFAULT = -1;
+  private static final String TIMESTAMP_BEGIN_DISPLAY = "begin timestamp";
+
+  public static final String TIMESTAMP_END_CONFIG = "timestamp.end";
+  private static final String TIMESTAMP_END_DOC = "end timestamp";
+  public static final long TIMESTAMP_END_DEFAULT = -1;
+  private static final String TIMESTAMP_END_DISPLAY = "end timestamp";
 
 
   public static ConfigDef baseConfigDef() {
@@ -352,9 +363,15 @@ public class JdbcSourceConnectorConfig extends AbstractConfig {
         .define(QUOTE_SQL_IDENTIFIERS_CONFIG, Type.STRING, QUOTE_SQL_IDENTIFIERS_DEFAULT,
             Importance.MEDIUM, QUOTE_SQL_IDENTIFIERS_DOC, MODE_GROUP, ++orderInGroup, Width.MEDIUM,
             QUOTE_SQL_IDENTIFIERS_DISPLAY, QUOTE_METHOD_RECOMMENDER)
-        .define(INCREMENTING_START_ID_CONFIG, Type.LONG, INCREMENTING_START_ID_DEFAULT,
-            Importance.MEDIUM, INCREMENTING_START_ID_DOC, MODE_GROUP, ++orderInGroup, Width.MEDIUM,
-            INCREMENTING_START_ID_DISPLAY, QUOTE_METHOD_RECOMMENDER);
+        .define(INCREMENTING_BEGIN_CONFIG, Type.LONG, INCREMENTING_BEGIN_DEFAULT, Importance.MEDIUM,
+            INCREMENTING_BEGIN_DOC, MODE_GROUP, ++orderInGroup, Width.MEDIUM,
+            INCREMENTING_BEGIN_DISPLAY, QUOTE_METHOD_RECOMMENDER)
+        .define(TIMESTAMP_BEGIN_CONFIG, Type.LONG, TIMESTAMP_BEGIN_DEFAULT, Importance.MEDIUM,
+            TIMESTAMP_BEGIN_DOC, MODE_GROUP, ++orderInGroup, Width.MEDIUM, TIMESTAMP_BEGIN_DISPLAY,
+            QUOTE_METHOD_RECOMMENDER)
+        .define(TIMESTAMP_END_CONFIG, Type.LONG, TIMESTAMP_END_DEFAULT, Importance.MEDIUM,
+            TIMESTAMP_END_DOC, MODE_GROUP, ++orderInGroup, Width.MEDIUM, TIMESTAMP_END_DISPLAY,
+            QUOTE_METHOD_RECOMMENDER);
   }
 
   private static final void addConnectorOptions(ConfigDef config) {
