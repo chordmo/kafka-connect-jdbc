@@ -1054,6 +1054,8 @@ public class GenericDatabaseDialect implements DatabaseDialect {
         int precision = defn.precision();
         int scale = defn.scale();
         log.trace("NUMERIC with precision: '{}' and scale: '{}'", precision, scale);
+        log.debug("defn----{} ", defn);
+        log.debug("col----{} ", col);
         if (precision < 19) { // fits in primitive data types.
           if (scale < 1 && scale >= NUMERIC_TYPE_SCALE_LOW) { // integer
             if (precision > 9) {

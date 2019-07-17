@@ -40,8 +40,10 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
 
   private final Logger log = LoggerFactory.getLogger(getClass()); // use concrete subclass
 
-  // 添加了自定义增量的开始节点id
-  protected TimestampIncrementingCriteria criteria;
+  /**
+   * 待执行次数
+   */
+  protected long executeCount = -1;
 
   protected final DatabaseDialect dialect;
   protected final QueryMode mode;
@@ -58,10 +60,11 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
   private String loggedQueryString;
 
   public TableQuerier(
-      DatabaseDialect dialect,
-      QueryMode mode,
-      String nameOrQuery,
-      String topicPrefix
+          DatabaseDialect dialect,
+          QueryMode mode,
+          String nameOrQuery,
+          String topicPrefix,
+          long executeCount
   ) {
     this.dialect = dialect;
     this.mode = mode;
@@ -69,6 +72,9 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
     this.query = mode.equals(QueryMode.QUERY) ? nameOrQuery : null;
     this.topicPrefix = topicPrefix;
     this.lastUpdate = 0;
+    if (-1 == this.executeCount) {
+      this.executeCount = executeCount;
+    }
   }
 
   public long getLastUpdate() {
@@ -90,11 +96,18 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
   }
 
   public void maybeStartQuery(Connection db) throws SQLException {
-    if (resultSet == null) {
-      stmt = getOrCreatePreparedStatement(db);
-      resultSet = executeQuery();
-      String schemaName = tableId != null ? tableId.tableName() : null; // backwards compatible
-      schemaMapping = SchemaMapping.create(schemaName, resultSet.getMetaData(), dialect);
+    log.info("executeCount----------c--------  {}", Long.toString(executeCount));
+    if (0 != executeCount) {
+      if (resultSet == null) {
+        log.info("executeQuery----------gogogo--------  {}", executeCount);
+        stmt = getOrCreatePreparedStatement(db);
+        resultSet = executeQuery();
+        String schemaName = tableId != null ? tableId.tableName() : null; // backwards compatible
+        schemaMapping = SchemaMapping.create(schemaName, resultSet.getMetaData(), dialect);
+      }
+    }
+    if (executeCount > 0) {
+      executeCount = executeCount - 1;
     }
   }
 

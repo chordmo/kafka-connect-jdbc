@@ -14,6 +14,7 @@
 
 package io.confluent.connect.jdbc.source;
 
+import java.sql.Date;
 import java.util.TimeZone;
 import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Schema;
@@ -144,13 +145,13 @@ public class TimestampIncrementingCriteria {
     Timestamp endTime = values.endTimetampValue();
     Long incOffset = values.lastIncrementedValue();
 
-    if (-1 != values.startId()) {
+    if (-1 != values.startId() && values.startId() > incOffset) {
       incOffset = values.startId();
     }
-    if (-1 != values.timestampBegin()) {
+    if (-1 != values.timestampBegin() && values.timestampBegin() > beginTime.getTime()) {
       beginTime = new Timestamp(values.timestampBegin());
     }
-    if (-1 != values.timestampEnd()) {
+    if (-1 != values.timestampEnd() && values.timestampEnd() > endTime.getTime()) {
       endTime = new Timestamp(values.timestampEnd());
     }
 
@@ -168,7 +169,8 @@ public class TimestampIncrementingCriteria {
   protected void setQueryParametersIncrementing(PreparedStatement stmt, CriteriaValues values)
       throws SQLException {
     Long incOffset = values.lastIncrementedValue();
-    if (-1 != values.startId()) {
+    log.info("Executing prepared statement with incrementing value = {}", incOffset);
+    if (-1 != values.startId() && values.startId() > incOffset) {
       incOffset = values.startId();
     }
     stmt.setLong(1, incOffset);
@@ -181,10 +183,14 @@ public class TimestampIncrementingCriteria {
     Timestamp beginTime = values.beginTimetampValue();
     Timestamp endTime = values.endTimetampValue();
 
-    if (-1 != values.timestampBegin()) {
+    log.info("Executing prepared statement with timestamp value gogogo = {} end time = {}",
+        DateTimeUtils.formatTimestamp(new Timestamp(values.timestampBegin()), timeZone),
+        DateTimeUtils.formatTimestamp(new Timestamp(values.timestampEnd()), timeZone));
+
+    if (-1 != values.timestampBegin() && values.timestampBegin() > beginTime.getTime()) {
       beginTime = new Timestamp(values.timestampBegin());
     }
-    if (-1 != values.timestampEnd()) {
+    if (-1 != values.timestampEnd() && values.timestampEnd() > endTime.getTime()) {
       endTime = new Timestamp(values.timestampEnd());
     }
 

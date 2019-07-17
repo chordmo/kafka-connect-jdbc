@@ -15,13 +15,11 @@
 package io.confluent.connect.jdbc.source;
 
 import java.util.TimeZone;
-
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -31,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
 import io.confluent.connect.jdbc.dialect.DatabaseDialect;
 import io.confluent.connect.jdbc.source.SchemaMapping.FieldSetter;
 import io.confluent.connect.jdbc.source.TimestampIncrementingCriteria.CriteriaValues;
@@ -59,7 +56,7 @@ import io.confluent.connect.jdbc.util.ExpressionBuilder;
  */
 public class TimestampIncrementingTableQuerier extends TableQuerier implements CriteriaValues {
   private static final Logger log =
-          LoggerFactory.getLogger(TimestampIncrementingTableQuerier.class);
+      LoggerFactory.getLogger(TimestampIncrementingTableQuerier.class);
   private long startId;
   private long timestampBegin;
   private long timestampEnd;
@@ -68,19 +65,19 @@ public class TimestampIncrementingTableQuerier extends TableQuerier implements C
   private String incrementingColumnName;
   private long timestampDelay;
   private TimestampIncrementingOffset offset;
-
+  protected TimestampIncrementingCriteria criteria;
   private final Map<String, String> partition;
   private final String topic;
   private final TimeZone timeZone;
 
   public TimestampIncrementingTableQuerier(DatabaseDialect dialect, QueryMode mode, String name,
-                                           String topicPrefix, List<String> timestampColumnNames, String incrementingColumnName,
-                                           Map<String, Object> offsetMap, Long timestampDelay, TimeZone timeZone, long startId,
-                                           long timestampBegin, long timestampEnd) {
-    super(dialect, mode, name, topicPrefix);
+      String topicPrefix, List<String> timestampColumnNames, String incrementingColumnName,
+      Map<String, Object> offsetMap, Long timestampDelay, TimeZone timeZone, long startId,
+      long timestampBegin, long timestampEnd, long executeCount) {
+    super(dialect, mode, name, topicPrefix, executeCount);
     this.incrementingColumnName = incrementingColumnName;
     this.timestampColumnNames =
-            timestampColumnNames != null ? timestampColumnNames : Collections.<String>emptyList();
+        timestampColumnNames != null ? timestampColumnNames : Collections.<String>emptyList();
     this.timestampDelay = timestampDelay;
     this.offset = TimestampIncrementingOffset.fromMap(offsetMap);
 
@@ -99,7 +96,7 @@ public class TimestampIncrementingTableQuerier extends TableQuerier implements C
         break;
       case QUERY:
         partition = Collections.singletonMap(JdbcSourceConnectorConstants.QUERY_NAME_KEY,
-                JdbcSourceConnectorConstants.QUERY_NAME_VALUE);
+            JdbcSourceConnectorConstants.QUERY_NAME_VALUE);
         topic = topicPrefix;
         break;
       default:
@@ -149,7 +146,7 @@ public class TimestampIncrementingTableQuerier extends TableQuerier implements C
     if (incrementingColumnName != null && incrementingColumnName.isEmpty()) {
       // Find the first auto-incremented column ...
       for (ColumnDefinition defn : dialect.describeColumns(db, tableId.catalogName(),
-              tableId.schemaName(), tableId.tableName(), null).values()) {
+          tableId.schemaName(), tableId.tableName(), null).values()) {
         if (defn.isAutoIncrement()) {
           incrementingColumnName = defn.id().name();
           break;
@@ -188,6 +185,10 @@ public class TimestampIncrementingTableQuerier extends TableQuerier implements C
       }
     }
     offset = criteria.extractValues(schemaMapping.schema(), record, offset);
+    // log.debug("schemaMapping--------{} ", schemaMapping);
+    // log.debug("schemaMapping----schema----{} ", schemaMapping.schema());
+    // log.debug("record--------{} ", record);
+    // log.debug("offset--------{} ", offset.toMap());
     return new SourceRecord(partition, offset.toMap(), topic, record.schema(), record);
   }
 
@@ -214,8 +215,8 @@ public class TimestampIncrementingTableQuerier extends TableQuerier implements C
   @Override
   public Timestamp endTimetampValue() throws SQLException {
     final long currentDbTime =
-            dialect.currentTimeOnDB(stmt.getConnection(), DateTimeUtils.getTimeZoneCalendar(timeZone))
-                    .getTime();
+        dialect.currentTimeOnDB(stmt.getConnection(), DateTimeUtils.getTimeZoneCalendar(timeZone))
+            .getTime();
     return new Timestamp(currentDbTime - timestampDelay);
   }
 
@@ -227,8 +228,8 @@ public class TimestampIncrementingTableQuerier extends TableQuerier implements C
   @Override
   public String toString() {
     return "TimestampIncrementingTableQuerier{" + "table=" + tableId + ", query='" + query + '\''
-            + ", topicPrefix='" + topicPrefix + '\'' + ", incrementingColumn='"
-            + (incrementingColumnName != null ? incrementingColumnName : "") + '\''
-            + ", timestampColumns=" + timestampColumnNames + '}';
+        + ", topicPrefix='" + topicPrefix + '\'' + ", incrementingColumn='"
+        + (incrementingColumnName != null ? incrementingColumnName : "") + '\''
+        + ", timestampColumns=" + timestampColumnNames + '}';
   }
 }
