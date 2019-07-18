@@ -1,16 +1,15 @@
 /*
  * Copyright 2018 Confluent Inc.
  *
- * Licensed under the Confluent Community License (the "License"); you may not use
- * this file except in compliance with the License.  You may obtain a copy of the
- * License at
+ * Licensed under the Confluent Community License (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
  *
  * http://www.confluent.io/confluent-community-license
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OF ANY KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and limitations under the
+ * License.
  */
 
 package io.confluent.connect.jdbc.source;
@@ -37,22 +36,17 @@ import io.confluent.connect.jdbc.source.SchemaMapping.FieldSetter;
 public class BulkTableQuerier extends TableQuerier {
   private static final Logger log = LoggerFactory.getLogger(BulkTableQuerier.class);
 
-  public BulkTableQuerier(
-          DatabaseDialect dialect,
-          QueryMode mode,
-          String name,
-          String topicPrefix,
-          long executeCount
-  ) {
-    super(dialect, mode, name, topicPrefix, executeCount);
+  public BulkTableQuerier(DatabaseDialect dialect, QueryMode mode, String name, String topicPrefix,
+                          long executeCount, long executeTime) {
+    super(dialect, mode, name, topicPrefix, executeCount, executeTime);
   }
 
   @Override
   protected void createPreparedStatement(Connection db) throws SQLException {
     switch (mode) {
       case TABLE:
-        String queryStr = dialect.expressionBuilder().append("SELECT * FROM ")
-                .append(tableId).toString();
+        String queryStr =
+                dialect.expressionBuilder().append("SELECT * FROM ").append(tableId).toString();
         recordQuery(queryStr);
         log.debug("{} prepared SQL query: {}", this, queryStr);
         stmt = dialect.createPreparedStatement(db, queryStr);
@@ -95,8 +89,7 @@ public class BulkTableQuerier extends TableQuerier {
         break;
       case QUERY:
         partition = Collections.singletonMap(JdbcSourceConnectorConstants.QUERY_NAME_KEY,
-                JdbcSourceConnectorConstants.QUERY_NAME_VALUE
-        );
+                JdbcSourceConnectorConstants.QUERY_NAME_VALUE);
         topic = topicPrefix;
         break;
       default:

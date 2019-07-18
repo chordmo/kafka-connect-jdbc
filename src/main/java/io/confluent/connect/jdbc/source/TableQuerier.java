@@ -1,16 +1,15 @@
 /*
  * Copyright 2018 Confluent Inc.
  *
- * Licensed under the Confluent Community License (the "License"); you may not use
- * this file except in compliance with the License.  You may obtain a copy of the
- * License at
+ * Licensed under the Confluent Community License (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
  *
  * http://www.confluent.io/confluent-community-license
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OF ANY KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and limitations under the
+ * License.
  */
 
 package io.confluent.connect.jdbc.source;
@@ -18,19 +17,17 @@ package io.confluent.connect.jdbc.source;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-
 import io.confluent.connect.jdbc.dialect.DatabaseDialect;
 import io.confluent.connect.jdbc.util.TableId;
 
 /**
- * TableQuerier executes queries against a specific table. Implementations handle different types
- * of queries: periodic bulk loading, incremental loads using auto incrementing IDs, incremental
- * loads using timestamps, etc.
+ * TableQuerier executes queries against a specific table. Implementations handle different types of
+ * queries: periodic bulk loading, incremental loads using auto incrementing IDs, incremental loads
+ * using timestamps, etc.
  */
 abstract class TableQuerier implements Comparable<TableQuerier> {
   public enum QueryMode {
@@ -51,6 +48,8 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
   protected final String topicPrefix;
   protected final TableId tableId;
 
+  protected long executeTime;
+
   // Mutable state
 
   protected long lastUpdate;
@@ -59,13 +58,8 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
   protected SchemaMapping schemaMapping;
   private String loggedQueryString;
 
-  public TableQuerier(
-          DatabaseDialect dialect,
-          QueryMode mode,
-          String nameOrQuery,
-          String topicPrefix,
-          long executeCount
-  ) {
+  public TableQuerier(DatabaseDialect dialect, QueryMode mode, String nameOrQuery,
+      String topicPrefix, long executeCount, long executeTime) {
     this.dialect = dialect;
     this.mode = mode;
     this.tableId = mode.equals(QueryMode.TABLE) ? dialect.parseTableIdentifier(nameOrQuery) : null;
@@ -75,6 +69,7 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
     if (-1 == this.executeCount) {
       this.executeCount = executeCount;
     }
+    this.executeTime = executeTime;
   }
 
   public long getLastUpdate() {

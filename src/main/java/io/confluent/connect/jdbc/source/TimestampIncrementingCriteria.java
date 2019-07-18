@@ -86,6 +86,7 @@ public class TimestampIncrementingCriteria {
   protected final Logger log = LoggerFactory.getLogger(getClass());
   protected final List<ColumnId> timestampColumns;
   protected final ColumnId incrementingColumn;
+  // protected final ColumnId incrementingColumn;
   protected final TimeZone timeZone;
 
 
@@ -173,7 +174,8 @@ public class TimestampIncrementingCriteria {
     if (-1 != values.startId() && values.startId() > incOffset) {
       incOffset = values.startId();
     }
-    stmt.setLong(1, incOffset);
+    stmt.setLong(1, -1);
+//    stmt.setLong(1, incOffset);
     log.info("Executing prepared statement with incrementing value = {}", incOffset);
   }
 
@@ -226,6 +228,26 @@ public class TimestampIncrementingCriteria {
           || extractedId > previousOffset.getIncrementingOffset() || hasTimestampColumns();
     }
     return new TimestampIncrementingOffset(extractedTimestamp, extractedId);
+  }
+
+  public TimestampIncrementingOffset extractValues(Schema schema, Struct record,
+      TimestampIncrementingOffset previousOffset, long time) {
+    Timestamp extractedTimestamp = null;
+    if (hasTimestampColumns()) {
+      extractedTimestamp = extractOffsetTimestamp(schema, record);
+      assert previousOffset == null || (previousOffset.getTimestampOffset() != null
+          && previousOffset.getTimestampOffset().compareTo(extractedTimestamp) <= 0);
+    }
+    Long extractedId = null;
+    if (hasIncrementedColumn()) {
+      extractedId = extractOffsetIncrementedId(schema, record);
+
+      // If we are only using an incrementing column, then this must be incrementing.
+      // If we are also using a timestamp, then we may see updates to older rows.
+      assert previousOffset == null || previousOffset.getIncrementingOffset() == -1L
+          || extractedId > previousOffset.getIncrementingOffset() || hasTimestampColumns();
+    }
+    return new TimestampIncrementingOffset(extractedTimestamp, extractedId, time);
   }
 
   /**

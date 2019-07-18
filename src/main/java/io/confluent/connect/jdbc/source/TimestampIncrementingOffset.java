@@ -1,23 +1,21 @@
 /*
  * Copyright 2018 Confluent Inc.
  *
- * Licensed under the Confluent Community License (the "License"); you may not use
- * this file except in compliance with the License.  You may obtain a copy of the
- * License at
+ * Licensed under the Confluent Community License (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
  *
  * http://www.confluent.io/confluent-community-license
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OF ANY KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and limitations under the
+ * License.
  */
 
 package io.confluent.connect.jdbc.source;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,20 +26,29 @@ public class TimestampIncrementingOffset {
   private static final String INCREMENTING_FIELD = "incrementing";
   private static final String TIMESTAMP_FIELD = "timestamp";
   private static final String TIMESTAMP_NANOS_FIELD = "timestamp_nanos";
+  private static final String EXECUTE_TIME_FIELD = "execute_time";
 
   private final Long incrementingOffset;
+  private final Long executeTimeOffset;
   private final Timestamp timestampOffset;
 
   /**
-   * @param timestampOffset the timestamp offset.
-   *                        If null, {@link #getTimestampOffset()} will return
-   *                        {@code new Timestamp(0)}.
-   * @param incrementingOffset the incrementing offset.
-   *                           If null, {@link #getIncrementingOffset()} will return -1.
+   * @param timestampOffset    the timestamp offset. If null, {@link #getTimestampOffset()} will
+   *                           return {@code new Timestamp(0)}.
+   * @param incrementingOffset the incrementing offset. If null, {@link #getIncrementingOffset()}
+   *                           will return -1.
    */
   public TimestampIncrementingOffset(Timestamp timestampOffset, Long incrementingOffset) {
     this.timestampOffset = timestampOffset;
     this.incrementingOffset = incrementingOffset;
+    this.executeTimeOffset = -1L;
+  }
+
+  public TimestampIncrementingOffset(Timestamp timestampOffset, Long incrementingOffset,
+      Long executeTimeOffset) {
+    this.timestampOffset = timestampOffset;
+    this.incrementingOffset = incrementingOffset;
+    this.executeTimeOffset = executeTimeOffset;
   }
 
   public long getIncrementingOffset() {
@@ -53,7 +60,7 @@ public class TimestampIncrementingOffset {
   }
 
   public Map<String, Object> toMap() {
-    Map<String, Object> map = new HashMap<>(3);
+    Map<String, Object> map = new HashMap<>(4);
     if (incrementingOffset != null) {
       map.put(INCREMENTING_FIELD, incrementingOffset);
     }
@@ -61,6 +68,9 @@ public class TimestampIncrementingOffset {
       map.put(TIMESTAMP_FIELD, timestampOffset.getTime());
       map.put(TIMESTAMP_NANOS_FIELD, (long) timestampOffset.getNanos());
     }
+    // if (executeTimeOffset != null) {
+    // map.put(EXECUTE_TIME_FIELD, executeTimeOffset);
+    // }
     return map;
   }
 
@@ -95,14 +105,12 @@ public class TimestampIncrementingOffset {
 
     TimestampIncrementingOffset that = (TimestampIncrementingOffset) o;
 
-    if (incrementingOffset != null
-        ? !incrementingOffset.equals(that.incrementingOffset)
+    if (incrementingOffset != null ? !incrementingOffset.equals(that.incrementingOffset)
         : that.incrementingOffset != null) {
       return false;
     }
-    return timestampOffset != null
-           ? timestampOffset.equals(that.timestampOffset)
-           : that.timestampOffset == null;
+    return timestampOffset != null ? timestampOffset.equals(that.timestampOffset)
+        : that.timestampOffset == null;
 
   }
 
