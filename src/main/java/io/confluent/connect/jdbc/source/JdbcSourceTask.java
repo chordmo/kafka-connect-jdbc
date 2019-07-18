@@ -273,15 +273,22 @@ public class JdbcSourceTask extends SourceTask {
       log.debug("++++a+++++querier  {}", querier);
       final List<SourceRecord> results = new ArrayList<>();
       try {
+//        if (querier.resultSet != null) {
+//          hadNext = querier.next();
+//        }
+//        if (!hadNext) {
         log.debug("Checking for next block of results from {}", querier.toString());
         querier.maybeStartQuery(cachedConnectionProvider.getConnection());
+//        }
+        if (querier.resultSet == null) {
+          continue;
+        }
 
         int batchMaxRows = config.getInt(JdbcSourceTaskConfig.BATCH_MAX_ROWS_CONFIG);
+
         boolean hadNext = true;
-        if (querier.resultSet != null) {
-          while (results.size() < batchMaxRows && (hadNext = querier.next())) {
-            results.add(querier.extractRecord());
-          }
+        while (results.size() < batchMaxRows && (hadNext = querier.next())) {
+          results.add(querier.extractRecord());
         }
 
         if (!hadNext) {

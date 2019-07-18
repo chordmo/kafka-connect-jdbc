@@ -88,7 +88,7 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
     if (resultSet == null) {
       stmt = getOrCreatePreparedStatement(db);
       resultSet = executeQuery();
-      if (null != resultSet) {
+      if (resultSet != null) {
         String schemaName = tableId != null ? tableId.tableName() : null; // backwards compatible
         schemaMapping = SchemaMapping.create(schemaName, resultSet.getMetaData(), dialect);
       }
