@@ -57,8 +57,8 @@ import io.confluent.connect.jdbc.util.ExpressionBuilder;
 public class TimestampIncrementingTableQuerier extends TableQuerier implements CriteriaValues {
   private static final Logger log =
       LoggerFactory.getLogger(TimestampIncrementingTableQuerier.class);
-  private long startId;
-
+  private long incrementingBegin;
+  //private long executeTime;
   private long timestampBegin;
   private long timestampEnd;
   private final List<String> timestampColumnNames;
@@ -73,9 +73,9 @@ public class TimestampIncrementingTableQuerier extends TableQuerier implements C
 
   public TimestampIncrementingTableQuerier(DatabaseDialect dialect, QueryMode mode, String name,
       String topicPrefix, List<String> timestampColumnNames, String incrementingColumnName,
-      Map<String, Object> offsetMap, Long timestampDelay, TimeZone timeZone, long startId,
-      long timestampBegin, long timestampEnd, long executeCount, long executeTime) {
-    super(dialect, mode, name, topicPrefix, executeCount, executeTime);
+      Map<String, Object> offsetMap, Long timestampDelay, TimeZone timeZone, long incrementingBegin,
+      long timestampBegin, long timestampEnd, long executeTime) {
+    super(dialect, mode, name, topicPrefix, executeTime);
     this.incrementingColumnName = incrementingColumnName;
     this.timestampColumnNames =
         timestampColumnNames != null ? timestampColumnNames : Collections.<String>emptyList();
@@ -105,9 +105,10 @@ public class TimestampIncrementingTableQuerier extends TableQuerier implements C
     }
 
     this.timeZone = timeZone;
-    this.startId = startId;
+    this.incrementingBegin = incrementingBegin;
     this.timestampBegin = timestampBegin;
     this.timestampEnd = timestampEnd;
+    this.executeTime = executeTime;
   }
 
   @Override
@@ -192,12 +193,18 @@ public class TimestampIncrementingTableQuerier extends TableQuerier implements C
     // log.debug("schemaMapping----schema----{} ", schemaMapping.schema());
     // log.debug("record--------{} ", record);
     // log.debug("offset--------{} ", offset.toMap());
+
     return new SourceRecord(partition, offset.toMap(), topic, record.schema(), record);
   }
 
   @Override
-  public long startId() throws SQLException {
-    return this.startId;
+  public long incrementingBegin() throws SQLException {
+    return this.incrementingBegin;
+  }
+
+  @Override
+  public long executeTime() throws SQLException {
+    return this.executeTime;
   }
 
   @Override
@@ -208,6 +215,11 @@ public class TimestampIncrementingTableQuerier extends TableQuerier implements C
   @Override
   public long timestampEnd() throws SQLException {
     return this.timestampEnd;
+  }
+
+  @Override
+  public long executeTimeValue() throws SQLException {
+    return offset.getExecuteTimeOffset();
   }
 
   @Override

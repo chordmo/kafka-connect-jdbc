@@ -42,9 +42,14 @@ public class TimestampIncrementingCriteria {
    */
   public interface CriteriaValues {
     /**
-     * 自定义开始ID Start ID 增量采集的时候给一个开始ID 这个用于自定义增量采集的开始ID 提供这个值就用代替Kafka里面的增量开始ID
+     * 自定义 开始ID Start ID 增量采集的时候给一个开始ID 这个用于自定义增量采集的开始ID 提供这个值就用代替Kafka里面的增量开始ID
      */
-    long startId() throws SQLException;
+    long incrementingBegin() throws SQLException;
+
+    /**
+     * 自定义 执行的时间
+     */
+    long executeTime() throws SQLException;
 
     /**
      * 自定义开始时间 开始的增量时间
@@ -52,10 +57,14 @@ public class TimestampIncrementingCriteria {
     long timestampBegin() throws SQLException;
 
     /**
-     * 自定义结束时间 结束的增量时间
+     * 自定义 结束时间 结束的增量时间
      */
     long timestampEnd() throws SQLException;
 
+    /**
+     * 自定义 历史执行的时间
+     */
+    long executeTimeValue() throws SQLException;
     /**
      * Get the beginning of the time period.
      *
@@ -145,14 +154,16 @@ public class TimestampIncrementingCriteria {
     Timestamp beginTime = values.beginTimetampValue();
     Timestamp endTime = values.endTimetampValue();
     Long incOffset = values.lastIncrementedValue();
+    Long executeTime = values.executeTime();
+    Long executeTimeValue = values.executeTimeValue();
 
-    if (-1 != values.startId() && values.startId() > incOffset) {
-      incOffset = values.startId();
+    if (-1 != values.incrementingBegin() && executeTime != executeTimeValue) {
+      incOffset = values.incrementingBegin();
     }
-    if (-1 != values.timestampBegin() && values.timestampBegin() > beginTime.getTime()) {
+    if (-1 != values.timestampBegin() && executeTime != executeTimeValue) {
       beginTime = new Timestamp(values.timestampBegin());
     }
-    if (-1 != values.timestampEnd() && values.timestampEnd() > endTime.getTime()) {
+    if (-1 != values.timestampEnd() && executeTime != executeTimeValue) {
       endTime = new Timestamp(values.timestampEnd());
     }
 
@@ -170,12 +181,13 @@ public class TimestampIncrementingCriteria {
   protected void setQueryParametersIncrementing(PreparedStatement stmt, CriteriaValues values)
       throws SQLException {
     Long incOffset = values.lastIncrementedValue();
+    Long executeTime = values.executeTime();
+    Long executeTimeValue = values.executeTimeValue();
     log.info("Executing prepared statement with incrementing value = {}", incOffset);
-    if (-1 != values.startId() && values.startId() > incOffset) {
-      incOffset = values.startId();
+    if (-1 != values.incrementingBegin() && executeTime != executeTimeValue) {
+      incOffset = values.incrementingBegin();
     }
-    stmt.setLong(1, -1);
-//    stmt.setLong(1, incOffset);
+    stmt.setLong(1, incOffset);
     log.info("Executing prepared statement with incrementing value = {}", incOffset);
   }
 
@@ -184,15 +196,17 @@ public class TimestampIncrementingCriteria {
       throws SQLException {
     Timestamp beginTime = values.beginTimetampValue();
     Timestamp endTime = values.endTimetampValue();
+    Long executeTime = values.executeTime();
+    Long executeTimeValue = values.executeTimeValue();
 
     log.info("Executing prepared statement with timestamp value gogogo = {} end time = {}",
         DateTimeUtils.formatTimestamp(new Timestamp(values.timestampBegin()), timeZone),
         DateTimeUtils.formatTimestamp(new Timestamp(values.timestampEnd()), timeZone));
 
-    if (-1 != values.timestampBegin() && values.timestampBegin() > beginTime.getTime()) {
+    if (-1 != values.timestampBegin() && executeTime != executeTimeValue) {
       beginTime = new Timestamp(values.timestampBegin());
     }
-    if (-1 != values.timestampEnd() && values.timestampEnd() > endTime.getTime()) {
+    if (-1 != values.timestampEnd() && executeTime != executeTimeValue) {
       endTime = new Timestamp(values.timestampEnd());
     }
 

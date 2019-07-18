@@ -16,39 +16,42 @@ package io.confluent.connect.jdbc.source;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.Map;
 
-public class TimestampIncrementingOffset {
+public class TimestampIncrementingOffset extends SourceOffset {
   private static final Logger log = LoggerFactory.getLogger(JdbcSourceTask.class);
 
   private static final String INCREMENTING_FIELD = "incrementing";
   private static final String TIMESTAMP_FIELD = "timestamp";
   private static final String TIMESTAMP_NANOS_FIELD = "timestamp_nanos";
-  private static final String EXECUTE_TIME_FIELD = "execute_time";
+
 
   private final Long incrementingOffset;
-  private final Long executeTimeOffset;
+
   private final Timestamp timestampOffset;
 
   /**
+   * 这个是保留源代码的，现在不用
    * @param timestampOffset    the timestamp offset. If null, {@link #getTimestampOffset()} will
    *                           return {@code new Timestamp(0)}.
    * @param incrementingOffset the incrementing offset. If null, {@link #getIncrementingOffset()}
    *                           will return -1.
    */
   public TimestampIncrementingOffset(Timestamp timestampOffset, Long incrementingOffset) {
+    super(-1L);
     this.timestampOffset = timestampOffset;
     this.incrementingOffset = incrementingOffset;
-    this.executeTimeOffset = -1L;
   }
 
   public TimestampIncrementingOffset(Timestamp timestampOffset, Long incrementingOffset,
-      Long executeTimeOffset) {
+                                     Long executeTimeOffset) {
+    super(executeTimeOffset);
     this.timestampOffset = timestampOffset;
     this.incrementingOffset = incrementingOffset;
-    this.executeTimeOffset = executeTimeOffset;
+
   }
 
   public long getIncrementingOffset() {
@@ -57,6 +60,10 @@ public class TimestampIncrementingOffset {
 
   public Timestamp getTimestampOffset() {
     return timestampOffset != null ? timestampOffset : new Timestamp(0L);
+  }
+
+  public Long getExecuteTimeOffset() {
+    return executeTimeOffset == null ? -1 : executeTimeOffset;
   }
 
   public Map<String, Object> toMap() {
@@ -68,19 +75,20 @@ public class TimestampIncrementingOffset {
       map.put(TIMESTAMP_FIELD, timestampOffset.getTime());
       map.put(TIMESTAMP_NANOS_FIELD, (long) timestampOffset.getNanos());
     }
-    // if (executeTimeOffset != null) {
-    // map.put(EXECUTE_TIME_FIELD, executeTimeOffset);
-    // }
+     if (executeTimeOffset != null) {
+     map.put(EXECUTE_TIME_FIELD, executeTimeOffset);
+     }
     return map;
   }
 
   public static TimestampIncrementingOffset fromMap(Map<String, ?> map) {
     if (map == null || map.isEmpty()) {
-      return new TimestampIncrementingOffset(null, null);
+      return new TimestampIncrementingOffset(null, null, null);
     }
 
     Long incr = (Long) map.get(INCREMENTING_FIELD);
     Long millis = (Long) map.get(TIMESTAMP_FIELD);
+    Long time = (Long) map.get(EXECUTE_TIME_FIELD);
     Timestamp ts = null;
     if (millis != null) {
       log.trace("millis is not null");
@@ -91,7 +99,7 @@ public class TimestampIncrementingOffset {
         ts.setNanos(nanos.intValue());
       }
     }
-    return new TimestampIncrementingOffset(ts, incr);
+    return new TimestampIncrementingOffset(ts, incr, time);
   }
 
   @Override
@@ -106,11 +114,11 @@ public class TimestampIncrementingOffset {
     TimestampIncrementingOffset that = (TimestampIncrementingOffset) o;
 
     if (incrementingOffset != null ? !incrementingOffset.equals(that.incrementingOffset)
-        : that.incrementingOffset != null) {
+            : that.incrementingOffset != null) {
       return false;
     }
     return timestampOffset != null ? timestampOffset.equals(that.timestampOffset)
-        : that.timestampOffset == null;
+            : that.timestampOffset == null;
 
   }
 

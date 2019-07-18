@@ -76,12 +76,6 @@ public class JdbcSourceTask extends SourceTask {
     } catch (ConfigException e) {
       throw new ConnectException("Couldn't start JdbcSourceTask due to configuration error", e);
     }
-    /**
-     * 执行次数
-     */
-    Long executeCount = config.getLong(JdbcSourceTaskConfig.EXECUTE_COUNT_CONFIG);
-
-    log.info("executeCount----------JdbcSourceTask--------  {}", Long.toString(executeCount));
 
     final String url = config.getString(JdbcSourceConnectorConfig.CONNECTION_URL_CONFIG);
     final int maxConnAttempts = config.getInt(JdbcSourceConnectorConfig.CONNECTION_ATTEMPTS_CONFIG);
@@ -112,9 +106,10 @@ public class JdbcSourceTask extends SourceTask {
     // used only in table mode
     Map<String, List<Map<String, String>>> partitionsByTableFqn = new HashMap<>();
     Map<Map<String, String>, Map<String, Object>> offsets = null;
-    if (mode.equals(JdbcSourceTaskConfig.MODE_INCREMENTING)
-            || mode.equals(JdbcSourceTaskConfig.MODE_TIMESTAMP)
-            || mode.equals(JdbcSourceTaskConfig.MODE_TIMESTAMP_INCREMENTING)) {
+//    if (mode.equals(JdbcSourceTaskConfig.MODE_INCREMENTING)
+//            || mode.equals(JdbcSourceTaskConfig.MODE_TIMESTAMP)
+//            || mode.equals(JdbcSourceTaskConfig.MODE_TIMESTAMP_INCREMENTING)) {
+    if (true) {
       List<Map<String, String>> partitions = new ArrayList<>(tables.size());
       switch (queryMode) {
         case TABLE:
@@ -150,8 +145,8 @@ public class JdbcSourceTask extends SourceTask {
     boolean validateNonNulls = config.getBoolean(JdbcSourceTaskConfig.VALIDATE_NON_NULL_CONFIG);
     TimeZone timeZone = config.timeZone();
 
-    long startId = config.getLong(JdbcSourceTaskConfig.INCREMENTING_BEGIN_CONFIG);
-    log.info("startId------------------  {}", Long.toString(startId));
+    long incrementingBegin = config.getLong(JdbcSourceTaskConfig.INCREMENTING_BEGIN_CONFIG);
+    log.info("incrementingBegin------------------  {}", Long.toString(incrementingBegin));
     long timestampBegin = config.getLong(JdbcSourceTaskConfig.TIMESTAMP_BEGIN_CONFIG);
     log.info("timestampBegin------------------  {}", Long.toString(timestampBegin));
     long timestampEnd = config.getLong(JdbcSourceTaskConfig.TIMESTAMP_END_CONFIG);
@@ -185,12 +180,6 @@ public class JdbcSourceTask extends SourceTask {
       if (offsets != null) {
         for (Map<String, String> toCheckPartition : tablePartitionsToCheck) {
           offset = offsets.get(toCheckPartition);
-//          Map<String, Object> woffset = null;
-//          woffset.putAll(offset);
-//          woffset.put("executeTime", executeTime);
-//          writer.offset(toCheckPartition, woffset);
-//          Map<String, String> cconfigs = context.configs();
-//          log.debug("context.cconfigs-------{}", cconfigs);
           if (offset != null) {
             log.info("Found offset {} for partition {}", offsets, toCheckPartition);
             break;
@@ -201,29 +190,24 @@ public class JdbcSourceTask extends SourceTask {
       String topicPrefix = config.getString(JdbcSourceTaskConfig.TOPIC_PREFIX_CONFIG);
       log.debug("offsets-------{}", offsets);
       log.debug("offset-------{}", offset);
-//      offset.put("executeTime", executeTime);
-//      Map<String, Object> woffset = null;
-//      woffset.putAll(offset);
-//      woffset.put("executeTime", executeTime);
-//      writer.offset(partition, woffset);
       Map<String, String> cconfigs = context.configs();
       log.debug("context.cconfigs-------{}", cconfigs);
       if (mode.equals(JdbcSourceTaskConfig.MODE_BULK)) {
         tableQueue
-                .add(new BulkTableQuerier(dialect, queryMode, tableOrQuery, topicPrefix, executeCount, executeTime));
+                .add(new BulkTableQuerier(dialect, queryMode, tableOrQuery, topicPrefix, offset, executeTime));
       } else if (mode.equals(JdbcSourceTaskConfig.MODE_INCREMENTING)) {
 
         tableQueue.add(new TimestampIncrementingTableQuerier(dialect, queryMode, tableOrQuery,
                 topicPrefix, null, incrementingColumn, offset, timestampDelayInterval, timeZone,
-                startId, timestampBegin, timestampEnd, executeCount, executeTime));
+                incrementingBegin, timestampBegin, timestampEnd, executeTime));
       } else if (mode.equals(JdbcSourceTaskConfig.MODE_TIMESTAMP)) {
         tableQueue.add(new TimestampIncrementingTableQuerier(dialect, queryMode, tableOrQuery,
-                topicPrefix, timestampColumns, null, offset, timestampDelayInterval, timeZone, startId,
-                timestampBegin, timestampEnd, executeCount, executeTime));
+                topicPrefix, timestampColumns, null, offset, timestampDelayInterval, timeZone, incrementingBegin,
+                timestampBegin, timestampEnd, executeTime));
       } else if (mode.endsWith(JdbcSourceTaskConfig.MODE_TIMESTAMP_INCREMENTING)) {
         tableQueue.add(new TimestampIncrementingTableQuerier(dialect, queryMode, tableOrQuery,
                 topicPrefix, timestampColumns, incrementingColumn, offset, timestampDelayInterval,
-                timeZone, startId, timestampBegin, timestampEnd, executeCount, executeTime));
+                timeZone, incrementingBegin, timestampBegin, timestampEnd, executeTime));
       }
     }
 
@@ -274,8 +258,6 @@ public class JdbcSourceTask extends SourceTask {
     log.trace("{} Polling for new data");
 
     while (running.get()) {
-
-
       final TableQuerier querier = tableQueue.peek();
       if (!querier.querying()) {
         // If not in the middle of an update, wait for next update time
@@ -296,8 +278,10 @@ public class JdbcSourceTask extends SourceTask {
 
         int batchMaxRows = config.getInt(JdbcSourceTaskConfig.BATCH_MAX_ROWS_CONFIG);
         boolean hadNext = true;
-        while (results.size() < batchMaxRows && (hadNext = querier.next())) {
-          results.add(querier.extractRecord());
+        if (querier.resultSet != null) {
+          while (results.size() < batchMaxRows && (hadNext = querier.next())) {
+            results.add(querier.extractRecord());
+          }
         }
 
         if (!hadNext) {

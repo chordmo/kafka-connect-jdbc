@@ -33,12 +33,14 @@ import io.confluent.connect.jdbc.source.SchemaMapping.FieldSetter;
 /**
  * BulkTableQuerier always returns the entire table.
  */
-public class BulkTableQuerier extends TableQuerier {
+public class BulkTableQuerier extends TableQuerier{
   private static final Logger log = LoggerFactory.getLogger(BulkTableQuerier.class);
+  private SourceOffset offset;
 
   public BulkTableQuerier(DatabaseDialect dialect, QueryMode mode, String name, String topicPrefix,
-                          long executeCount, long executeTime) {
-    super(dialect, mode, name, topicPrefix, executeCount, executeTime);
+                          Map<String, Object> offsetMap, long executeTime) {
+    super(dialect, mode, name, topicPrefix, executeTime);
+    this.offset = SourceOffset.fromMap(offsetMap);
   }
 
   @Override
@@ -63,7 +65,11 @@ public class BulkTableQuerier extends TableQuerier {
 
   @Override
   protected ResultSet executeQuery() throws SQLException {
-    return stmt.executeQuery();
+    if (executeTime != offset.executeTimeOffset) {
+      return stmt.executeQuery();
+    } else {
+      return null;
+    }
   }
 
   @Override
@@ -95,7 +101,8 @@ public class BulkTableQuerier extends TableQuerier {
       default:
         throw new ConnectException("Unexpected query mode: " + mode);
     }
-    return new SourceRecord(partition, null, topic, record.schema(), record);
+    offset = new SourceOffset(executeTime);
+    return new SourceRecord(partition, offset.toMap(), topic, record.schema(), record);
   }
 
   @Override

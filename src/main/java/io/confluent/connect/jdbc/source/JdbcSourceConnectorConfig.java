@@ -296,10 +296,10 @@ public class JdbcSourceConnectorConfig extends AbstractConfig {
         public static final long TIMESTAMP_END_DEFAULT = -1;
         private static final String TIMESTAMP_END_DISPLAY = "end timestamp";
 
-        public static final String EXECUTE_COUNT_CONFIG = "execute.count";
-        private static final String EXECUTE_COUNT_DOC = "task execute count,-1一直执行，0停止执行";
-        public static final long EXECUTE_COUNT_DEFAULT = -1;
-        private static final String EXECUTE_COUNT_DISPLAY = "task execute count";
+//        public static final String EXECUTE_COUNT_CONFIG = "execute.count";
+//        private static final String EXECUTE_COUNT_DOC = "task execute count,-1一直执行，0停止执行";
+//        public static final long EXECUTE_COUNT_DEFAULT = -1;
+//        private static final String EXECUTE_COUNT_DISPLAY = "task execute count";
 
         public static final String EXECUTE_TIME_CONFIG = "execute.time";
         private static final String EXECUTE_TIME_DOC = "启动项目的时间";
@@ -421,10 +421,6 @@ public class JdbcSourceConnectorConfig extends AbstractConfig {
                                 .define(TIMESTAMP_END_CONFIG, Type.LONG, TIMESTAMP_END_DEFAULT,
                                                 Importance.MEDIUM, TIMESTAMP_END_DOC, MODE_GROUP,
                                                 ++orderInGroup, Width.MEDIUM, TIMESTAMP_END_DISPLAY,
-                                                QUOTE_METHOD_RECOMMENDER)
-                                .define(EXECUTE_COUNT_CONFIG, Type.LONG, EXECUTE_COUNT_DEFAULT,
-                                                Importance.MEDIUM, EXECUTE_COUNT_DOC, MODE_GROUP,
-                                                ++orderInGroup, Width.MEDIUM, EXECUTE_COUNT_DISPLAY,
                                                 QUOTE_METHOD_RECOMMENDER)
                                 .define(EXECUTE_TIME_CONFIG, Type.LONG, EXECUTE_TIME_DEFAULT,
                                                 Importance.MEDIUM, EXECUTE_TIME_DOC, MODE_GROUP,

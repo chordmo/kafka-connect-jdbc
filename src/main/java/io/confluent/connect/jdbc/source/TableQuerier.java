@@ -17,10 +17,12 @@ package io.confluent.connect.jdbc.source;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+
 import io.confluent.connect.jdbc.dialect.DatabaseDialect;
 import io.confluent.connect.jdbc.util.TableId;
 
@@ -36,11 +38,6 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
   }
 
   private final Logger log = LoggerFactory.getLogger(getClass()); // use concrete subclass
-
-  /**
-   * 待执行次数
-   */
-  protected long executeCount = -1;
 
   protected final DatabaseDialect dialect;
   protected final QueryMode mode;
@@ -59,16 +56,13 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
   private String loggedQueryString;
 
   public TableQuerier(DatabaseDialect dialect, QueryMode mode, String nameOrQuery,
-      String topicPrefix, long executeCount, long executeTime) {
+                      String topicPrefix, long executeTime) {
     this.dialect = dialect;
     this.mode = mode;
     this.tableId = mode.equals(QueryMode.TABLE) ? dialect.parseTableIdentifier(nameOrQuery) : null;
     this.query = mode.equals(QueryMode.QUERY) ? nameOrQuery : null;
     this.topicPrefix = topicPrefix;
     this.lastUpdate = 0;
-    if (-1 == this.executeCount) {
-      this.executeCount = executeCount;
-    }
     this.executeTime = executeTime;
   }
 
@@ -91,18 +85,13 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
   }
 
   public void maybeStartQuery(Connection db) throws SQLException {
-    log.info("executeCount----------c--------  {}", Long.toString(executeCount));
-    if (0 != executeCount) {
-      if (resultSet == null) {
-        log.info("executeQuery----------gogogo--------  {}", executeCount);
-        stmt = getOrCreatePreparedStatement(db);
-        resultSet = executeQuery();
+    if (resultSet == null) {
+      stmt = getOrCreatePreparedStatement(db);
+      resultSet = executeQuery();
+      if (null != resultSet) {
         String schemaName = tableId != null ? tableId.tableName() : null; // backwards compatible
         schemaMapping = SchemaMapping.create(schemaName, resultSet.getMetaData(), dialect);
       }
-    }
-    if (executeCount > 0) {
-      executeCount = executeCount - 1;
     }
   }
 
