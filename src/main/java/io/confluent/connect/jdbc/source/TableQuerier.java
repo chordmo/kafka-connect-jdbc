@@ -98,6 +98,7 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
   protected abstract ResultSet executeQuery() throws SQLException;
 
   public boolean next() throws SQLException {
+    log.info("resultSet--{} ", resultSet);
     return resultSet.next();
   }
 

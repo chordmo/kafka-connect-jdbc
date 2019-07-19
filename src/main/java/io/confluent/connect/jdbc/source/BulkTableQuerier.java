@@ -65,11 +65,12 @@ public class BulkTableQuerier extends TableQuerier{
 
   @Override
   protected ResultSet executeQuery() throws SQLException {
-    if (executeTime != offset.executeTimeOffset) {
-      return stmt.executeQuery();
-    } else {
-      return null;
-    }
+    return stmt.executeQuery();
+//    if (executeTime != offset.executeTimeOffset) {
+//      return stmt.executeQuery();
+//    } else {
+//      return null;
+//    }
   }
 
   @Override
