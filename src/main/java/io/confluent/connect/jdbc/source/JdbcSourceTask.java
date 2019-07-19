@@ -74,7 +74,6 @@ public class JdbcSourceTask extends SourceTask {
   public void start(Map<String, String> properties) {
     log.info("Starting JDBC source task");
     log.info("properties---------p---------  {}", properties.toString());
-
     try {
       config = new JdbcSourceTaskConfig(properties);
     } catch (ConfigException e) {
@@ -83,10 +82,6 @@ public class JdbcSourceTask extends SourceTask {
     long executeTime = config.getLong(JdbcSourceTaskConfig.EXECUTE_TIME_CONFIG);
     log.info("executeTime------------------  {}", Long.toString(executeTime));
     name = properties.get("name") + "_" + executeTime;
-    Boolean a = sourceStatus.containsKey(name);
-    boolean b = sourceStatus.get(name) == null;
-    log.info("a-- {}", a);
-    log.info("b-- {}", b);
     if (!sourceStatus.containsKey(name) || sourceStatus.get(name) == null || sourceStatus.get(name).resultSet == null) {
 
       final String url = config.getString(JdbcSourceConnectorConfig.CONNECTION_URL_CONFIG);
@@ -162,7 +157,6 @@ public class JdbcSourceTask extends SourceTask {
       long timestampEnd = config.getLong(JdbcSourceTaskConfig.TIMESTAMP_END_CONFIG);
       log.info("timestampEnd------------------  {}", Long.toString(timestampEnd));
 
-
       for (String tableOrQuery : tablesOrQuery) {
         final List<Map<String, String>> tablePartitionsToCheck;
         final Map<String, String> partition;
@@ -197,13 +191,10 @@ public class JdbcSourceTask extends SourceTask {
             }
           }
         }
+
         String topicPrefix = config.getString(JdbcSourceTaskConfig.TOPIC_PREFIX_CONFIG);
-
-
         if (!sourceStatus.containsKey(name) || sourceStatus.get(name).resultSet == null) {
           TableQuerier tableQuerier = null;
-
-
           if (mode.equals(JdbcSourceTaskConfig.MODE_BULK)) {
             tableQuerier = new BulkTableQuerier(dialect, queryMode, tableOrQuery, topicPrefix, offset, executeTime);
           } else if (mode.equals(JdbcSourceTaskConfig.MODE_INCREMENTING)) {
@@ -303,11 +294,8 @@ public class JdbcSourceTask extends SourceTask {
             continue; // Re-check stop flag before continuing
           }
         }
-
         final List<SourceRecord> results = new ArrayList<>();
-
         log.debug("Checking for next block of results from {}", querier.toString());
-
         if (querier.resultSet == null) {
           log.trace("querier.resultSet is null {}", querier.toString());
           resetAndRequeueHead(querier);
@@ -318,18 +306,15 @@ public class JdbcSourceTask extends SourceTask {
         while (results.size() < batchMaxRows && (hadNext = querier.next())) {
           results.add(querier.extractRecord());
         }
-
         if (!hadNext) {
           // If we finished processing the results from the current query, we can reset and send
           // the querier to the tail of the queue
           resetAndRequeueHead(querier);
         }
-
         if (results.isEmpty()) {
           log.trace("No updates for {}", querier.toString());
           break;
         }
-
         log.info("Returning {} records for {}", results.size(), querier.toString());
         return results;
       } catch (SQLException sqle) {
