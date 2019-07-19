@@ -53,6 +53,10 @@ public class JdbcSourceTask extends SourceTask {
   private PriorityQueue<TableQuerier> tableQueue = new PriorityQueue<TableQuerier>();
   private final AtomicBoolean running = new AtomicBoolean(false);
 
+  private static Map<String, TableQuerier> sourceStatus = new HashMap<>();
+
+  private String name;
+
   public JdbcSourceTask() {
     this.time = new SystemTime();
   }
@@ -70,145 +74,164 @@ public class JdbcSourceTask extends SourceTask {
   public void start(Map<String, String> properties) {
     log.info("Starting JDBC source task");
     log.info("properties---------p---------  {}", properties.toString());
+
     try {
       config = new JdbcSourceTaskConfig(properties);
     } catch (ConfigException e) {
       throw new ConnectException("Couldn't start JdbcSourceTask due to configuration error", e);
     }
-
-    final String url = config.getString(JdbcSourceConnectorConfig.CONNECTION_URL_CONFIG);
-    final int maxConnAttempts = config.getInt(JdbcSourceConnectorConfig.CONNECTION_ATTEMPTS_CONFIG);
-    final long retryBackoff = config.getLong(JdbcSourceConnectorConfig.CONNECTION_BACKOFF_CONFIG);
-
-    final String dialectName = config.getString(JdbcSourceConnectorConfig.DIALECT_NAME_CONFIG);
-    if (dialectName != null && !dialectName.trim().isEmpty()) {
-      dialect = DatabaseDialects.create(dialectName, config);
-    } else {
-      dialect = DatabaseDialects.findBestFor(url, config);
-    }
-    log.info("Using JDBC dialect {}", dialect.name());
-
-    cachedConnectionProvider = new CachedConnectionProvider(dialect, maxConnAttempts, retryBackoff);
-
-    List<String> tables = config.getList(JdbcSourceTaskConfig.TABLES_CONFIG);
-    String query = config.getString(JdbcSourceTaskConfig.QUERY_CONFIG);
-    if ((tables.isEmpty() && query.isEmpty()) || (!tables.isEmpty() && !query.isEmpty())) {
-      throw new ConnectException("Invalid configuration: each JdbcSourceTask must have at "
-              + "least one table assigned to it or one query specified");
-    }
-    TableQuerier.QueryMode queryMode = !query.isEmpty() ? TableQuerier.QueryMode.QUERY : TableQuerier.QueryMode.TABLE;
-    List<String> tablesOrQuery = queryMode == TableQuerier.QueryMode.QUERY ? Collections.singletonList(query) : tables;
-
-    String mode = config.getString(JdbcSourceTaskConfig.MODE_CONFIG);
-    // used only in table mode
-    Map<String, List<Map<String, String>>> partitionsByTableFqn = new HashMap<>();
-    Map<Map<String, String>, Map<String, Object>> offsets = null;
-    // if (mode.equals(JdbcSourceTaskConfig.MODE_INCREMENTING)
-    // || mode.equals(JdbcSourceTaskConfig.MODE_TIMESTAMP)
-    // || mode.equals(JdbcSourceTaskConfig.MODE_TIMESTAMP_INCREMENTING)) {
-    if (true) {
-      List<Map<String, String>> partitions = new ArrayList<>(tables.size());
-      switch (queryMode) {
-        case TABLE:
-          log.trace("Starting in TABLE mode");
-          for (String table : tables) {
-            // Find possible partition maps for different offset protocols
-            // We need to search by all offset protocol partition keys to support
-            // compatibility
-            List<Map<String, String>> tablePartitions = possibleTablePartitions(table);
-            partitions.addAll(tablePartitions);
-            partitionsByTableFqn.put(table, tablePartitions);
-          }
-          break;
-        case QUERY:
-          log.trace("Starting in QUERY mode");
-          partitions.add(Collections.singletonMap(JdbcSourceConnectorConstants.QUERY_NAME_KEY,
-                  JdbcSourceConnectorConstants.QUERY_NAME_VALUE));
-          break;
-        default:
-          throw new ConnectException("Unknown query mode: " + queryMode);
-      }
-
-      offsets = context.offsetStorageReader().offsets(partitions);
-      log.debug("The partitions are {}", partitions);
-      log.info("The partition offsets are {}", offsets);
-    }
-
-    String incrementingColumn = config.getString(JdbcSourceTaskConfig.INCREMENTING_COLUMN_NAME_CONFIG);
-    List<String> timestampColumns = config.getList(JdbcSourceTaskConfig.TIMESTAMP_COLUMN_NAME_CONFIG);
-    Long timestampDelayInterval = config.getLong(JdbcSourceTaskConfig.TIMESTAMP_DELAY_INTERVAL_MS_CONFIG);
-    boolean validateNonNulls = config.getBoolean(JdbcSourceTaskConfig.VALIDATE_NON_NULL_CONFIG);
-    TimeZone timeZone = config.timeZone();
-
-    long incrementingBegin = config.getLong(JdbcSourceTaskConfig.INCREMENTING_BEGIN_CONFIG);
-    log.info("incrementingBegin------------------  {}", Long.toString(incrementingBegin));
-    long timestampBegin = config.getLong(JdbcSourceTaskConfig.TIMESTAMP_BEGIN_CONFIG);
-    log.info("timestampBegin------------------  {}", Long.toString(timestampBegin));
-    long timestampEnd = config.getLong(JdbcSourceTaskConfig.TIMESTAMP_END_CONFIG);
-    log.info("timestampEnd------------------  {}", Long.toString(timestampEnd));
     long executeTime = config.getLong(JdbcSourceTaskConfig.EXECUTE_TIME_CONFIG);
     log.info("executeTime------------------  {}", Long.toString(executeTime));
+    name = properties.get("name") + "_" + executeTime;
+    Boolean a = sourceStatus.containsKey(name);
+    boolean b = sourceStatus.get(name) == null;
+    log.info("a-- {}", a);
+    log.info("b-- {}", b);
+    if (!sourceStatus.containsKey(name) || sourceStatus.get(name) == null || sourceStatus.get(name).resultSet == null) {
 
-    for (String tableOrQuery : tablesOrQuery) {
-      final List<Map<String, String>> tablePartitionsToCheck;
-      final Map<String, String> partition;
-      switch (queryMode) {
-        case TABLE:
-          if (validateNonNulls) {
-            validateNonNullable(mode, tableOrQuery, incrementingColumn, timestampColumns);
-          }
-          tablePartitionsToCheck = partitionsByTableFqn.get(tableOrQuery);
-          break;
-        case QUERY:
-          partition = Collections.singletonMap(JdbcSourceConnectorConstants.QUERY_NAME_KEY,
-                  JdbcSourceConnectorConstants.QUERY_NAME_VALUE);
-          tablePartitionsToCheck = Collections.singletonList(partition);
-          break;
-        default:
-          throw new ConnectException("Unexpected query mode: " + queryMode);
+      final String url = config.getString(JdbcSourceConnectorConfig.CONNECTION_URL_CONFIG);
+      final int maxConnAttempts = config.getInt(JdbcSourceConnectorConfig.CONNECTION_ATTEMPTS_CONFIG);
+      final long retryBackoff = config.getLong(JdbcSourceConnectorConfig.CONNECTION_BACKOFF_CONFIG);
+
+      final String dialectName = config.getString(JdbcSourceConnectorConfig.DIALECT_NAME_CONFIG);
+
+      if (dialectName != null && !dialectName.trim().isEmpty()) {
+        dialect = DatabaseDialects.create(dialectName, config);
+      } else {
+        dialect = DatabaseDialects.findBestFor(url, config);
+      }
+      log.info("Using JDBC dialect {}", dialect.name());
+
+      cachedConnectionProvider = new CachedConnectionProvider(dialect, maxConnAttempts, retryBackoff);
+
+      List<String> tables = config.getList(JdbcSourceTaskConfig.TABLES_CONFIG);
+      String query = config.getString(JdbcSourceTaskConfig.QUERY_CONFIG);
+      if ((tables.isEmpty() && query.isEmpty()) || (!tables.isEmpty() && !query.isEmpty())) {
+        throw new ConnectException("Invalid configuration: each JdbcSourceTask must have at "
+                + "least one table assigned to it or one query specified");
       }
 
-      // The partition map varies by offset protocol. Since we don't know which
-      // protocol each
-      // table's offsets are keyed by, we need to use the different possible
-      // partitions
-      // (newest protocol version first) to find the actual offsets for each table.
-      Map<String, Object> offset = null;
-      if (offsets != null) {
-        for (Map<String, String> toCheckPartition : tablePartitionsToCheck) {
-          offset = offsets.get(toCheckPartition);
-          if (offset != null) {
-            log.info("Found offset {} for partition {}", offsets, toCheckPartition);
+      TableQuerier.QueryMode queryMode = !query.isEmpty() ? TableQuerier.QueryMode.QUERY : TableQuerier.QueryMode.TABLE;
+      List<String> tablesOrQuery = queryMode == TableQuerier.QueryMode.QUERY ? Collections.singletonList(query) : tables;
+
+      String mode = config.getString(JdbcSourceTaskConfig.MODE_CONFIG);
+      // used only in table mode
+      Map<String, List<Map<String, String>>> partitionsByTableFqn = new HashMap<>();
+      Map<Map<String, String>, Map<String, Object>> offsets = null;
+      // if (mode.equals(JdbcSourceTaskConfig.MODE_INCREMENTING)
+      // || mode.equals(JdbcSourceTaskConfig.MODE_TIMESTAMP)
+      // || mode.equals(JdbcSourceTaskConfig.MODE_TIMESTAMP_INCREMENTING)) {
+      if (true) {
+        List<Map<String, String>> partitions = new ArrayList<>(tables.size());
+        switch (queryMode) {
+          case TABLE:
+            log.trace("Starting in TABLE mode");
+            for (String table : tables) {
+              // Find possible partition maps for different offset protocols
+              // We need to search by all offset protocol partition keys to support
+              // compatibility
+              List<Map<String, String>> tablePartitions = possibleTablePartitions(table);
+              partitions.addAll(tablePartitions);
+              partitionsByTableFqn.put(table, tablePartitions);
+            }
             break;
+          case QUERY:
+            log.trace("Starting in QUERY mode");
+            partitions.add(Collections.singletonMap(JdbcSourceConnectorConstants.QUERY_NAME_KEY,
+                    JdbcSourceConnectorConstants.QUERY_NAME_VALUE));
+            break;
+          default:
+            throw new ConnectException("Unknown query mode: " + queryMode);
+        }
+
+        offsets = context.offsetStorageReader().offsets(partitions);
+        log.debug("The partitions are {}", partitions);
+        log.info("The partition offsets are {}", offsets);
+      }
+
+      String incrementingColumn = config.getString(JdbcSourceTaskConfig.INCREMENTING_COLUMN_NAME_CONFIG);
+      List<String> timestampColumns = config.getList(JdbcSourceTaskConfig.TIMESTAMP_COLUMN_NAME_CONFIG);
+      Long timestampDelayInterval = config.getLong(JdbcSourceTaskConfig.TIMESTAMP_DELAY_INTERVAL_MS_CONFIG);
+      boolean validateNonNulls = config.getBoolean(JdbcSourceTaskConfig.VALIDATE_NON_NULL_CONFIG);
+      TimeZone timeZone = config.timeZone();
+
+      long incrementingBegin = config.getLong(JdbcSourceTaskConfig.INCREMENTING_BEGIN_CONFIG);
+      log.info("incrementingBegin------------------  {}", Long.toString(incrementingBegin));
+      long timestampBegin = config.getLong(JdbcSourceTaskConfig.TIMESTAMP_BEGIN_CONFIG);
+      log.info("timestampBegin------------------  {}", Long.toString(timestampBegin));
+      long timestampEnd = config.getLong(JdbcSourceTaskConfig.TIMESTAMP_END_CONFIG);
+      log.info("timestampEnd------------------  {}", Long.toString(timestampEnd));
+
+
+      for (String tableOrQuery : tablesOrQuery) {
+        final List<Map<String, String>> tablePartitionsToCheck;
+        final Map<String, String> partition;
+        switch (queryMode) {
+          case TABLE:
+            if (validateNonNulls) {
+              validateNonNullable(mode, tableOrQuery, incrementingColumn, timestampColumns);
+            }
+            tablePartitionsToCheck = partitionsByTableFqn.get(tableOrQuery);
+            break;
+          case QUERY:
+            partition = Collections.singletonMap(JdbcSourceConnectorConstants.QUERY_NAME_KEY,
+                    JdbcSourceConnectorConstants.QUERY_NAME_VALUE);
+            tablePartitionsToCheck = Collections.singletonList(partition);
+            break;
+          default:
+            throw new ConnectException("Unexpected query mode: " + queryMode);
+        }
+
+        // The partition map varies by offset protocol. Since we don't know which
+        // protocol each
+        // table's offsets are keyed by, we need to use the different possible
+        // partitions
+        // (newest protocol version first) to find the actual offsets for each table.
+        Map<String, Object> offset = null;
+        if (offsets != null) {
+          for (Map<String, String> toCheckPartition : tablePartitionsToCheck) {
+            offset = offsets.get(toCheckPartition);
+            if (offset != null) {
+              log.info("Found offset {} for partition {}", offsets, toCheckPartition);
+              break;
+            }
+          }
+        }
+        String topicPrefix = config.getString(JdbcSourceTaskConfig.TOPIC_PREFIX_CONFIG);
+
+
+        if (!sourceStatus.containsKey(name) || sourceStatus.get(name).resultSet == null) {
+          TableQuerier tableQuerier = null;
+
+
+          if (mode.equals(JdbcSourceTaskConfig.MODE_BULK)) {
+            tableQuerier = new BulkTableQuerier(dialect, queryMode, tableOrQuery, topicPrefix, offset, executeTime);
+          } else if (mode.equals(JdbcSourceTaskConfig.MODE_INCREMENTING)) {
+            tableQuerier = new TimestampIncrementingTableQuerier(dialect, queryMode, tableOrQuery, topicPrefix, null,
+                    incrementingColumn, offset, timestampDelayInterval, timeZone, incrementingBegin, timestampBegin,
+                    timestampEnd, executeTime);
+          } else if (mode.equals(JdbcSourceTaskConfig.MODE_TIMESTAMP)) {
+            tableQuerier = new TimestampIncrementingTableQuerier(dialect, queryMode, tableOrQuery, topicPrefix,
+                    timestampColumns, null, offset, timestampDelayInterval, timeZone, incrementingBegin, timestampBegin,
+                    timestampEnd, executeTime);
+          } else if (mode.endsWith(JdbcSourceTaskConfig.MODE_TIMESTAMP_INCREMENTING)) {
+            tableQuerier = new TimestampIncrementingTableQuerier(dialect, queryMode, tableOrQuery, topicPrefix,
+                    timestampColumns, incrementingColumn, offset, timestampDelayInterval, timeZone, incrementingBegin,
+                    timestampBegin, timestampEnd, executeTime);
+          }
+          if (tableOrQuery != null) {
+            tableQueue.add(tableQuerier);
+            sourceStatus.put(name, tableQuerier);
           }
         }
       }
-
-      String topicPrefix = config.getString(JdbcSourceTaskConfig.TOPIC_PREFIX_CONFIG);
-      log.debug("offsets-------{}", offsets);
-      log.debug("offset-------{}", offset);
-      Map<String, String> cconfigs = context.configs();
-      log.debug("context.cconfigs-------{}", cconfigs);
-      if (mode.equals(JdbcSourceTaskConfig.MODE_BULK)) {
-        tableQueue.add(new BulkTableQuerier(dialect, queryMode, tableOrQuery, topicPrefix, offset, executeTime));
-      } else if (mode.equals(JdbcSourceTaskConfig.MODE_INCREMENTING)) {
-
-        tableQueue.add(new TimestampIncrementingTableQuerier(dialect, queryMode, tableOrQuery, topicPrefix, null,
-                incrementingColumn, offset, timestampDelayInterval, timeZone, incrementingBegin, timestampBegin,
-                timestampEnd, executeTime));
-      } else if (mode.equals(JdbcSourceTaskConfig.MODE_TIMESTAMP)) {
-        tableQueue.add(new TimestampIncrementingTableQuerier(dialect, queryMode, tableOrQuery, topicPrefix,
-                timestampColumns, null, offset, timestampDelayInterval, timeZone, incrementingBegin, timestampBegin,
-                timestampEnd, executeTime));
-      } else if (mode.endsWith(JdbcSourceTaskConfig.MODE_TIMESTAMP_INCREMENTING)) {
-        tableQueue.add(new TimestampIncrementingTableQuerier(dialect, queryMode, tableOrQuery, topicPrefix,
-                timestampColumns, incrementingColumn, offset, timestampDelayInterval, timeZone, incrementingBegin,
-                timestampBegin, timestampEnd, executeTime));
-      }
     }
-
-    running.set(true);
-    log.info("Started JDBC source task");
+    if (sourceStatus.get(name) != null) {
+      running.set(true);
+      log.info("Started JDBC source task");
+    } else {
+      running.set(false);
+    }
   }
 
   // This method returns a list of possible partition maps for different offset
@@ -229,7 +252,7 @@ public class JdbcSourceTask extends SourceTask {
   }
 
   protected void closeResources() {
-    log.info("Closing resources for JDBC source task");
+    log.debug("Closing resources for JDBC source task");
     try {
       if (cachedConnectionProvider != null) {
         cachedConnectionProvider.close();
@@ -253,27 +276,43 @@ public class JdbcSourceTask extends SourceTask {
   @Override
   public List<SourceRecord> poll() throws InterruptedException {
     log.trace("{} Polling for new data");
-
     while (running.get()) {
-      final TableQuerier querier = tableQueue.peek();
-
-      if (!querier.querying()) {
-        // If not in the middle of an update, wait for next update time
-        final long nextUpdate = querier.getLastUpdate()
-                + config.getInt(JdbcSourceTaskConfig.POLL_INTERVAL_MS_CONFIG);
-        final long untilNext = nextUpdate - time.milliseconds();
-        if (untilNext > 0) {
-          log.trace("Waiting {} ms to poll {} next", untilNext, querier.toString());
-          time.sleep(untilNext);
-          continue; // Re-check stop flag before continuing
-        }
-      }
-
-      final List<SourceRecord> results = new ArrayList<>();
+      TableQuerier querier = null;
       try {
-        log.debug("Checking for next block of results from {}", querier.toString());
-        querier.maybeStartQuery(cachedConnectionProvider.getConnection());
+        if (sourceStatus.get(name) != null && sourceStatus.get(name).resultSet != null) {
+          querier = sourceStatus.get(name);
+        } else {
+          querier = tableQueue.peek();
+          if (cachedConnectionProvider == null) {
+            log.debug("cachedConnectionProvider is null: ", cachedConnectionProvider);
+            break;
+          }
+          querier.maybeStartQuery(cachedConnectionProvider.getConnection());
+        }
+        if (querier == null) {
+          break;
+        }
+        if (!querier.querying()) {
+          // If not in the middle of an update, wait for next update time
+          final long nextUpdate = querier.getLastUpdate()
+                  + config.getInt(JdbcSourceTaskConfig.POLL_INTERVAL_MS_CONFIG);
+          final long untilNext = nextUpdate - time.milliseconds();
+          if (untilNext > 0) {
+            log.trace("Waiting {} ms to poll {} next", untilNext, querier.toString());
+            time.sleep(untilNext);
+            continue; // Re-check stop flag before continuing
+          }
+        }
 
+        final List<SourceRecord> results = new ArrayList<>();
+
+        log.debug("Checking for next block of results from {}", querier.toString());
+
+        if (querier.resultSet == null) {
+          log.trace("querier.resultSet is null {}", querier.toString());
+          resetAndRequeueHead(querier);
+          break;
+        }
         int batchMaxRows = config.getInt(JdbcSourceTaskConfig.BATCH_MAX_ROWS_CONFIG);
         boolean hadNext = true;
         while (results.size() < batchMaxRows && (hadNext = querier.next())) {
@@ -288,10 +327,10 @@ public class JdbcSourceTask extends SourceTask {
 
         if (results.isEmpty()) {
           log.trace("No updates for {}", querier.toString());
-          continue;
+          break;
         }
 
-        log.debug("Returning {} records for {}", results.size(), querier.toString());
+        log.info("Returning {} records for {}", results.size(), querier.toString());
         return results;
       } catch (SQLException sqle) {
         log.error("Failed to run query for table {}: {}", querier.toString(), sqle);
@@ -307,10 +346,13 @@ public class JdbcSourceTask extends SourceTask {
 
     // Only in case of shutdown
     final TableQuerier querier = tableQueue.peek();
-    if (querier != null) {
+    if (querier != null && querier.resultSet == null) {
       resetAndRequeueHead(querier);
+      closeResources();
     }
-    closeResources();
+    if (querier == null) {
+      closeResources();
+    }
     return null;
   }
 
@@ -320,6 +362,7 @@ public class JdbcSourceTask extends SourceTask {
     assert removedQuerier == expectedHead;
     expectedHead.reset(time.milliseconds());
     tableQueue.add(expectedHead);
+    sourceStatus.remove(name);
   }
 
   private void validateNonNullable(String incrementalMode, String table, String incrementingColumn,

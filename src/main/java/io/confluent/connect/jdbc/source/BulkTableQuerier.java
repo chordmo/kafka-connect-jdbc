@@ -33,7 +33,7 @@ import io.confluent.connect.jdbc.source.SchemaMapping.FieldSetter;
 /**
  * BulkTableQuerier always returns the entire table.
  */
-public class BulkTableQuerier extends TableQuerier{
+public class BulkTableQuerier extends TableQuerier {
   private static final Logger log = LoggerFactory.getLogger(BulkTableQuerier.class);
   private SourceOffset offset;
 
@@ -60,6 +60,15 @@ public class BulkTableQuerier extends TableQuerier{
         break;
       default:
         throw new ConnectException("Unknown mode: " + mode);
+    }
+  }
+
+  public void maybeStartQuery(Connection db) throws SQLException {
+    if (resultSet == null && executeTime != offset.executeTimeOffset) {
+      stmt = getOrCreatePreparedStatement(db);
+      resultSet = executeQuery();
+      String schemaName = tableId != null ? tableId.tableName() : null; // backwards compatible
+      schemaMapping = SchemaMapping.create(schemaName, resultSet.getMetaData(), dialect);
     }
   }
 

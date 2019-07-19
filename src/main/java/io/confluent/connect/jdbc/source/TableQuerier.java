@@ -88,17 +88,14 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
     if (resultSet == null) {
       stmt = getOrCreatePreparedStatement(db);
       resultSet = executeQuery();
-      if (resultSet != null) {
-        String schemaName = tableId != null ? tableId.tableName() : null; // backwards compatible
-        schemaMapping = SchemaMapping.create(schemaName, resultSet.getMetaData(), dialect);
-      }
+      String schemaName = tableId != null ? tableId.tableName() : null; // backwards compatible
+      schemaMapping = SchemaMapping.create(schemaName, resultSet.getMetaData(), dialect);
     }
   }
 
   protected abstract ResultSet executeQuery() throws SQLException;
 
   public boolean next() throws SQLException {
-    log.info("resultSet--{} ", resultSet);
     return resultSet.next();
   }
 
