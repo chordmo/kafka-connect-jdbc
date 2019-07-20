@@ -53,8 +53,9 @@ public class JdbcSourceTask extends SourceTask {
   private PriorityQueue<TableQuerier> tableQueue = new PriorityQueue<TableQuerier>();
   private final AtomicBoolean running = new AtomicBoolean(false);
 
-  private static Map<String, TableQuerier> sourceStatus = new HashMap<>();
-
+  private static Map<String, Map<String, TableQuerier>> cachedJdbcSourceTask = new HashMap<>();
+  private static Map<String, Connection> cachedConnection = new HashMap<>();
+  //  private static Map<String, TableQuerier> cachedTableQuerierMap = new HashMap<>();
   private String name;
 
   public JdbcSourceTask() {
@@ -82,8 +83,8 @@ public class JdbcSourceTask extends SourceTask {
     long executeTime = config.getLong(JdbcSourceTaskConfig.EXECUTE_TIME_CONFIG);
     log.info("executeTime------------------  {}", Long.toString(executeTime));
     name = properties.get("name") + "_" + executeTime;
-    if (!sourceStatus.containsKey(name) || sourceStatus.get(name) == null || sourceStatus.get(name).resultSet == null) {
-
+    if (!cachedJdbcSourceTask.containsKey(name) || cachedJdbcSourceTask.get(name).size() == 0) {
+      cachedJdbcSourceTask.put(name, new HashMap<>());
       final String url = config.getString(JdbcSourceConnectorConfig.CONNECTION_URL_CONFIG);
       final int maxConnAttempts = config.getInt(JdbcSourceConnectorConfig.CONNECTION_ATTEMPTS_CONFIG);
       final long retryBackoff = config.getLong(JdbcSourceConnectorConfig.CONNECTION_BACKOFF_CONFIG);
@@ -98,7 +99,7 @@ public class JdbcSourceTask extends SourceTask {
       log.info("Using JDBC dialect {}", dialect.name());
 
       cachedConnectionProvider = new CachedConnectionProvider(dialect, maxConnAttempts, retryBackoff);
-
+      cachedConnection.put(name, cachedConnectionProvider.getConnection());
       List<String> tables = config.getList(JdbcSourceTaskConfig.TABLES_CONFIG);
       String query = config.getString(JdbcSourceTaskConfig.QUERY_CONFIG);
       if ((tables.isEmpty() && query.isEmpty()) || (!tables.isEmpty() && !query.isEmpty())) {
@@ -193,31 +194,29 @@ public class JdbcSourceTask extends SourceTask {
         }
 
         String topicPrefix = config.getString(JdbcSourceTaskConfig.TOPIC_PREFIX_CONFIG);
-        if (!sourceStatus.containsKey(name) || sourceStatus.get(name).resultSet == null) {
-          TableQuerier tableQuerier = null;
-          if (mode.equals(JdbcSourceTaskConfig.MODE_BULK)) {
-            tableQuerier = new BulkTableQuerier(dialect, queryMode, tableOrQuery, topicPrefix, offset, executeTime);
-          } else if (mode.equals(JdbcSourceTaskConfig.MODE_INCREMENTING)) {
-            tableQuerier = new TimestampIncrementingTableQuerier(dialect, queryMode, tableOrQuery, topicPrefix, null,
-                    incrementingColumn, offset, timestampDelayInterval, timeZone, incrementingBegin, timestampBegin,
-                    timestampEnd, executeTime);
-          } else if (mode.equals(JdbcSourceTaskConfig.MODE_TIMESTAMP)) {
-            tableQuerier = new TimestampIncrementingTableQuerier(dialect, queryMode, tableOrQuery, topicPrefix,
-                    timestampColumns, null, offset, timestampDelayInterval, timeZone, incrementingBegin, timestampBegin,
-                    timestampEnd, executeTime);
-          } else if (mode.endsWith(JdbcSourceTaskConfig.MODE_TIMESTAMP_INCREMENTING)) {
-            tableQuerier = new TimestampIncrementingTableQuerier(dialect, queryMode, tableOrQuery, topicPrefix,
-                    timestampColumns, incrementingColumn, offset, timestampDelayInterval, timeZone, incrementingBegin,
-                    timestampBegin, timestampEnd, executeTime);
-          }
-          if (tableOrQuery != null) {
-            tableQueue.add(tableQuerier);
-            sourceStatus.put(name, tableQuerier);
-          }
+        TableQuerier tableQuerier = null;
+        if (mode.equals(JdbcSourceTaskConfig.MODE_BULK)) {
+          tableQuerier = new BulkTableQuerier(dialect, queryMode, tableOrQuery, topicPrefix, offset, executeTime);
+        } else if (mode.equals(JdbcSourceTaskConfig.MODE_INCREMENTING)) {
+          tableQuerier = new TimestampIncrementingTableQuerier(dialect, queryMode, tableOrQuery, topicPrefix, null,
+                  incrementingColumn, offset, timestampDelayInterval, timeZone, incrementingBegin, timestampBegin,
+                  timestampEnd, executeTime);
+        } else if (mode.equals(JdbcSourceTaskConfig.MODE_TIMESTAMP)) {
+          tableQuerier = new TimestampIncrementingTableQuerier(dialect, queryMode, tableOrQuery, topicPrefix,
+                  timestampColumns, null, offset, timestampDelayInterval, timeZone, incrementingBegin, timestampBegin,
+                  timestampEnd, executeTime);
+        } else if (mode.endsWith(JdbcSourceTaskConfig.MODE_TIMESTAMP_INCREMENTING)) {
+          tableQuerier = new TimestampIncrementingTableQuerier(dialect, queryMode, tableOrQuery, topicPrefix,
+                  timestampColumns, incrementingColumn, offset, timestampDelayInterval, timeZone, incrementingBegin,
+                  timestampBegin, timestampEnd, executeTime);
+        }
+        if (tableQuerier != null) {
+          tableQueue.add(tableQuerier);
+          cachedJdbcSourceTask.get(name).put(tableQuerier.tableId.tableName(), tableQuerier);
         }
       }
     }
-    if (sourceStatus.get(name) != null) {
+    if (cachedJdbcSourceTask.get(name).size() != 0) {
       running.set(true);
       log.info("Started JDBC source task");
     } else {
@@ -268,21 +267,23 @@ public class JdbcSourceTask extends SourceTask {
   public List<SourceRecord> poll() throws InterruptedException {
     log.trace("{} Polling for new data");
     while (running.get()) {
-      TableQuerier querier = null;
+      if (tableQueue.size() == 0) {
+        break;
+      }
+      final TableQuerier querier = cachedJdbcSourceTask.get(name).get(tableQueue.peek().tableId.tableName());
       try {
-        if (sourceStatus.get(name) != null && sourceStatus.get(name).resultSet != null) {
-          querier = sourceStatus.get(name);
-        } else {
-          querier = tableQueue.peek();
-          if (cachedConnectionProvider == null) {
-            log.debug("cachedConnectionProvider is null: ", cachedConnectionProvider);
-            break;
-          }
-          querier.maybeStartQuery(cachedConnectionProvider.getConnection());
-        }
+
         if (querier == null) {
           break;
         }
+
+        querier.maybeStartQuery(cachedConnection.get(name));
+        if (querier.resultSet == null) {
+          log.trace("querier.resultSet is null {}", querier.toString());
+          resetAndRequeueHead(querier);
+          break;
+        }
+
         if (!querier.querying()) {
           // If not in the middle of an update, wait for next update time
           final long nextUpdate = querier.getLastUpdate()
@@ -294,13 +295,10 @@ public class JdbcSourceTask extends SourceTask {
             continue; // Re-check stop flag before continuing
           }
         }
+
         final List<SourceRecord> results = new ArrayList<>();
         log.debug("Checking for next block of results from {}", querier.toString());
-        if (querier.resultSet == null) {
-          log.trace("querier.resultSet is null {}", querier.toString());
-          resetAndRequeueHead(querier);
-          break;
-        }
+
         int batchMaxRows = config.getInt(JdbcSourceTaskConfig.BATCH_MAX_ROWS_CONFIG);
         boolean hadNext = true;
         while (results.size() < batchMaxRows && (hadNext = querier.next())) {
@@ -324,7 +322,7 @@ public class JdbcSourceTask extends SourceTask {
       } catch (Throwable t) {
         resetAndRequeueHead(querier);
         // This task has failed, so close any resources (may be reopened if needed) before throwing
-        closeResources();
+//        closeResources();
         throw t;
       }
     }
@@ -333,10 +331,11 @@ public class JdbcSourceTask extends SourceTask {
     final TableQuerier querier = tableQueue.peek();
     if (querier != null && querier.resultSet == null) {
       resetAndRequeueHead(querier);
-      closeResources();
+//      closeResources();
     }
-    if (querier == null) {
+    if (cachedJdbcSourceTask.get(name).size() == 0) {
       closeResources();
+      cachedJdbcSourceTask.put(name, new HashMap<>());
     }
     return null;
   }
@@ -345,9 +344,9 @@ public class JdbcSourceTask extends SourceTask {
     log.debug("Resetting querier {}", expectedHead.toString());
     TableQuerier removedQuerier = tableQueue.poll();
     assert removedQuerier == expectedHead;
+    cachedJdbcSourceTask.get(name).remove(name + expectedHead.tableId.tableName());
     expectedHead.reset(time.milliseconds());
     tableQueue.add(expectedHead);
-    sourceStatus.remove(name);
   }
 
   private void validateNonNullable(String incrementalMode, String table, String incrementingColumn,
