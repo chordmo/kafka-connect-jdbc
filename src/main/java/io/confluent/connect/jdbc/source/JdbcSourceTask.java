@@ -55,7 +55,6 @@ public class JdbcSourceTask extends SourceTask {
 
   private static Map<String, Map<String, TableQuerier>> cachedJdbcSourceTask = new HashMap<>();
   private static Map<String, Connection> cachedConnection = new HashMap<>();
-  //  private static Map<String, TableQuerier> cachedTableQuerierMap = new HashMap<>();
   private String name;
 
   public JdbcSourceTask() {
@@ -81,7 +80,6 @@ public class JdbcSourceTask extends SourceTask {
       throw new ConnectException("Couldn't start JdbcSourceTask due to configuration error", e);
     }
     long executeTime = config.getLong(JdbcSourceTaskConfig.EXECUTE_TIME_CONFIG);
-    log.info("executeTime------------------  {}", Long.toString(executeTime));
     name = properties.get("name") + "_" + executeTime;
     if (!cachedJdbcSourceTask.containsKey(name) || cachedJdbcSourceTask.get(name).size() == 0) {
       cachedJdbcSourceTask.put(name, new HashMap<>());
@@ -142,7 +140,6 @@ public class JdbcSourceTask extends SourceTask {
 
         offsets = context.offsetStorageReader().offsets(partitions);
         log.debug("The partitions are {}", partitions);
-        log.info("The partition offsets are {}", offsets);
       }
 
       String incrementingColumn = config.getString(JdbcSourceTaskConfig.INCREMENTING_COLUMN_NAME_CONFIG);
@@ -152,11 +149,8 @@ public class JdbcSourceTask extends SourceTask {
       TimeZone timeZone = config.timeZone();
 
       long incrementingBegin = config.getLong(JdbcSourceTaskConfig.INCREMENTING_BEGIN_CONFIG);
-      log.info("incrementingBegin------------------  {}", Long.toString(incrementingBegin));
       long timestampBegin = config.getLong(JdbcSourceTaskConfig.TIMESTAMP_BEGIN_CONFIG);
-      log.info("timestampBegin------------------  {}", Long.toString(timestampBegin));
       long timestampEnd = config.getLong(JdbcSourceTaskConfig.TIMESTAMP_END_CONFIG);
-      log.info("timestampEnd------------------  {}", Long.toString(timestampEnd));
 
       for (String tableOrQuery : tablesOrQuery) {
         final List<Map<String, String>> tablePartitionsToCheck;
@@ -313,7 +307,7 @@ public class JdbcSourceTask extends SourceTask {
           log.trace("No updates for {}", querier.toString());
           break;
         }
-        log.info("Returning {} records for {}", results.size(), querier.toString());
+        log.trace("Returning {} records for {}", results.size(), querier.toString());
         return results;
       } catch (SQLException sqle) {
         log.error("Failed to run query for table {}: {}", querier.toString(), sqle);
