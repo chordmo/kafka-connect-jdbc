@@ -303,7 +303,7 @@ public class JdbcSourceConnectorConfig extends AbstractConfig {
 
         public static final String EXECUTE_TIME_CONFIG = "execute.time";
         private static final String EXECUTE_TIME_DOC = "启动项目的时间";
-        public static final long EXECUTE_TIME_DEFAULT = -1;
+        public static final long EXECUTE_TIME_DEFAULT = Long.MIN_VALUE;
         private static final String EXECUTE_TIME_DISPLAY = "启动项目的时间";
 
 

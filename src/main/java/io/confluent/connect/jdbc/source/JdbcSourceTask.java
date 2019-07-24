@@ -238,13 +238,14 @@ public class JdbcSourceTask extends SourceTask {
   protected void closeResources() {
     log.debug("Closing resources for JDBC source task");
     try {
-      if (cachedConnectionProvider != null) {
-        cachedConnectionProvider.close();
+      if (cachedConnection.get(name) != null) {
+        cachedConnection.get(name).close();
       }
     } catch (Throwable t) {
       log.warn("Error while closing the connections", t);
     } finally {
-      cachedConnectionProvider = null;
+//      cachedConnectionProvider = null;
+      cachedConnection.remove(name);
       try {
         if (dialect != null) {
           dialect.close();
@@ -353,7 +354,8 @@ public class JdbcSourceTask extends SourceTask {
 
       boolean incrementingOptional = false;
       boolean atLeastOneTimestampNotOptional = false;
-      final Connection conn = cachedConnectionProvider.getConnection();
+//      final Connection conn = cachedConnectionProvider.getConnection();
+      final Connection conn = cachedConnection.get(name);
       Map<ColumnId, ColumnDefinition> defnsById = dialect.describeColumns(conn, table, null);
       for (ColumnDefinition defn : defnsById.values()) {
         String columnName = defn.id().name();

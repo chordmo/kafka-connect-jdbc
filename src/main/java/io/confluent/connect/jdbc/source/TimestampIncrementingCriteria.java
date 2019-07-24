@@ -183,12 +183,12 @@ public class TimestampIncrementingCriteria {
     Long incOffset = values.lastIncrementedValue();
     Long executeTime = values.executeTime();
     Long executeTimeValue = values.executeTimeValue();
-    log.info("Executing prepared statement with incrementing value = {}", incOffset);
+    log.debug("Executing prepared statement with incrementing value = {}", incOffset);
     if (-1 != values.incrementingBegin() && executeTime != executeTimeValue) {
       incOffset = values.incrementingBegin();
     }
     stmt.setLong(1, incOffset);
-    log.info("Executing prepared statement with incrementing value = {}", incOffset);
+    log.debug("Executing prepared statement with incrementing value = {}", incOffset);
   }
 
 
