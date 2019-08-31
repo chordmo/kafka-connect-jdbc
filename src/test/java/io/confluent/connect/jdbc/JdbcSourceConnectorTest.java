@@ -64,14 +64,14 @@ public class JdbcSourceConnectorTest {
   @Before
   public void setup() {
     connector = new JdbcSourceConnector();
-//    db = new EmbeddedDerby();
+    db = new EmbeddedDerby();
     connProps = new HashMap<>();
-//    connProps.put(JdbcSourceConnectorConfig.CONNECTION_URL_CONFIG, db.getUrl());
+    connProps.put(JdbcSourceConnectorConfig.CONNECTION_URL_CONFIG, db.getUrl());
     connProps.put(JdbcSourceConnectorConfig.CONNECTION_URL_CONFIG, "jdbc:mysql://node1:3306/kafka_test");
     connProps.put(JdbcSourceConnectorConfig.MODE_CONFIG, JdbcSourceConnectorConfig.MODE_BULK);
     connProps.put(JdbcSourceConnectorConfig.TOPIC_PREFIX_CONFIG, "test-");
-    connProps.put(JdbcSourceConnectorConfig.CONNECTION_USER_CONFIG, "root");
-    connProps.put(JdbcSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG, "passw0rd");
+    connProps.put(JdbcSourceConnectorConfig.CONNECTION_USER_CONFIG, "roottest");
+    connProps.put(JdbcSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG, "123456");
     connProps.put(JdbcSourceConnectorConfig.CATALOG_PATTERN_CONFIG, "kafka_test");
     
 //    connProps.put(JdbcSourceConnectorConfig.DIALECT_NAME_CONFIG, "fuck_test");

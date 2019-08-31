@@ -126,6 +126,34 @@ public class EmbeddedDerby {
 
 		StringBuilder statement = new StringBuilder();
 		statement.append("CREATE TABLE ");
+		statement.append(name);
+		statement.append(" (");
+		for (int i = 0; i < fields.length; i += 2) {
+			if (i > 0) {
+				statement.append(", ");
+			}
+			statement.append(fields[i]);
+			statement.append(" ");
+			statement.append(fields[i + 1]);
+		}
+		statement.append(")");
+
+		Statement stmt = conn.createStatement();
+		String statementStr = statement.toString();
+		log.debug("Creating table {} in {} with statement {}", name, this.name, statementStr);
+		stmt.execute(statementStr);
+	}
+
+	public void createTable_Bak(String name, String... fields) throws SQLException {
+		if (fields.length == 0) {
+			throw new IllegalArgumentException("Must specify at least one column when creating a table");
+		}
+		if (fields.length % 2 != 0) {
+			throw new IllegalArgumentException("Must specify files in pairs of name followed by " + "column spec");
+		}
+
+		StringBuilder statement = new StringBuilder();
+		statement.append("CREATE TABLE ");
 		statement.append(quoteCaseSensitive(name));
 		statement.append(" (");
 		for (int i = 0; i < fields.length; i += 2) {

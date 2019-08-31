@@ -69,9 +69,17 @@ public class ColumnDefinition {
   ) {
     this.id = id;
     this.typeName = typeName;
-    this.jdbcType = jdbcType;
     this.displaySize = displaySize;
     this.precision = precision;
+    if(jdbcType == Types.NUMERIC){
+      if(precision == 0 || precision > 18){
+        this.jdbcType = Types.DECIMAL;
+      }else{
+        this.jdbcType = jdbcType;
+      }
+    }else{
+      this.jdbcType = jdbcType;
+    }
     this.scale = scale;
     this.autoIncremented = autoIncremented;
     this.caseSensitive = caseSensitive;

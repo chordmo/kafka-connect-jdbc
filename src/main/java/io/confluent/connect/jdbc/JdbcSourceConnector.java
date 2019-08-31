@@ -79,7 +79,7 @@ public class JdbcSourceConnector extends SourceConnector {
             config.getInt(JdbcSourceConnectorConfig.CONNECTION_ATTEMPTS_CONFIG);
     final long connectionRetryBackoff =
             config.getLong(JdbcSourceConnectorConfig.CONNECTION_BACKOFF_CONFIG);
-    dialect = DatabaseDialects.findBestFor(dbUrl, config);
+      dialect = DatabaseDialects.findBestFor(dbUrl, config);
     cachedConnectionProvider =
             new CachedConnectionProvider(dialect, maxConnectionAttempts, connectionRetryBackoff);
 

@@ -141,8 +141,8 @@ public interface DatabaseDialect extends ConnectionProvider {
    * @throws SQLException if there is an error with the database connection
    */
   PreparedStatement createPreparedStatement(
-      Connection connection,
-      String query
+          Connection connection,
+          String query
   ) throws SQLException;
 
   /**
@@ -179,8 +179,8 @@ public interface DatabaseDialect extends ConnectionProvider {
    * @throws SQLException if there is an error with the database connection
    */
   Timestamp currentTimeOnDB(
-      Connection connection,
-      Calendar cal
+          Connection connection,
+          Calendar cal
   ) throws SQLException, ConnectException;
 
   /**
@@ -213,9 +213,9 @@ public interface DatabaseDialect extends ConnectionProvider {
    * @throws SQLException if there is an error accessing the metadata
    */
   Map<ColumnId, ColumnDefinition> describeColumns(
-      Connection connection,
-      String tablePattern,
-      String columnPattern
+          Connection connection,
+          String tablePattern,
+          String columnPattern
   ) throws SQLException;
 
   /**
@@ -230,11 +230,11 @@ public interface DatabaseDialect extends ConnectionProvider {
    * @throws SQLException if there is an error accessing the metadata
    */
   Map<ColumnId, ColumnDefinition> describeColumns(
-      Connection connection,
-      String catalogPattern,
-      String schemaPattern,
-      String tablePattern,
-      String columnPattern
+          Connection connection,
+          String catalogPattern,
+          String schemaPattern,
+          String tablePattern,
+          String columnPattern
   ) throws SQLException;
 
   /**
@@ -242,11 +242,11 @@ public interface DatabaseDialect extends ConnectionProvider {
    *
    * @param rsMetadata the result set metadata; may not be null
    * @return the column definitions keyed by their {@link ColumnId} and in the same order as the
-   *     result set; never null
+   * result set; never null
    * @throws SQLException if there is an error accessing the result set metadata
    */
   Map<ColumnId, ColumnDefinition> describeColumns(
-      ResultSetMetaData rsMetadata
+          ResultSetMetaData rsMetadata
   ) throws SQLException;
 
   /**
@@ -269,8 +269,8 @@ public interface DatabaseDialect extends ConnectionProvider {
    * @throws SQLException if there is an error accessing the result set metadata
    */
   Map<ColumnId, ColumnDefinition> describeColumnsByQuerying(
-      Connection connection,
-      TableId tableId
+          Connection connection,
+          TableId tableId
   ) throws SQLException;
 
   /**
@@ -284,8 +284,8 @@ public interface DatabaseDialect extends ConnectionProvider {
    * @return the {@link TimestampIncrementingCriteria} implementation; never null
    */
   TimestampIncrementingCriteria criteriaFor(
-      ColumnId incrementingColumn,
-      List<ColumnId> timestampColumns
+          ColumnId incrementingColumn,
+          List<ColumnId> timestampColumns
   );
 
   /**
@@ -319,9 +319,9 @@ public interface DatabaseDialect extends ConnectionProvider {
    * @return the INSERT statement; may not be null
    */
   String buildInsertStatement(
-      TableId table,
-      Collection<ColumnId> keyColumns,
-      Collection<ColumnId> nonKeyColumns
+          TableId table,
+          Collection<ColumnId> keyColumns,
+          Collection<ColumnId> nonKeyColumns
   );
 
   /**
@@ -336,9 +336,9 @@ public interface DatabaseDialect extends ConnectionProvider {
    * @return the UPDATE statement; may not be null
    */
   String buildUpdateStatement(
-      TableId table,
-      Collection<ColumnId> keyColumns,
-      Collection<ColumnId> nonKeyColumns
+          TableId table,
+          Collection<ColumnId> keyColumns,
+          Collection<ColumnId> nonKeyColumns
   );
 
   /**
@@ -355,9 +355,9 @@ public interface DatabaseDialect extends ConnectionProvider {
    * @throws UnsupportedOperationException if the dialect does not support upserts
    */
   String buildUpsertQueryStatement(
-      TableId table,
-      Collection<ColumnId> keyColumns,
-      Collection<ColumnId> nonKeyColumns
+          TableId table,
+          Collection<ColumnId> keyColumns,
+          Collection<ColumnId> nonKeyColumns
   );
 
   /**
@@ -399,11 +399,11 @@ public interface DatabaseDialect extends ConnectionProvider {
    * @see #bindField(PreparedStatement, int, Schema, Object)
    */
   StatementBinder statementBinder(
-      PreparedStatement statement,
-      JdbcSinkConfig.PrimaryKeyMode pkMode,
-      SchemaPair schemaPair,
-      FieldsMetadata fieldsMetadata,
-      JdbcSinkConfig.InsertMode insertMode
+          PreparedStatement statement,
+          JdbcSinkConfig.PrimaryKeyMode pkMode,
+          SchemaPair schemaPair,
+          FieldsMetadata fieldsMetadata,
+          JdbcSinkConfig.InsertMode insertMode
   );
 
   /**
@@ -418,10 +418,10 @@ public interface DatabaseDialect extends ConnectionProvider {
    * @see #statementBinder
    */
   void bindField(
-      PreparedStatement statement,
-      int index,
-      Schema schema,
-      Object value
+          PreparedStatement statement,
+          int index,
+          Schema schema,
+          Object value
   ) throws SQLException;
 
   /**

@@ -15,6 +15,9 @@
 
 package io.confluent.connect.jdbc.dialect;
 
+import io.confluent.connect.jdbc.source.JdbcSourceConnectorConfig;
+import io.confluent.connect.jdbc.source.JdbcSourceTaskConfig;
+import io.confluent.connect.jdbc.util.CachedConnectionProvider;
 import org.apache.kafka.connect.data.Date;
 import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Schema;
@@ -23,7 +26,14 @@ import org.apache.kafka.connect.data.Time;
 import org.apache.kafka.connect.data.Timestamp;
 import org.junit.Test;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 import io.confluent.connect.jdbc.util.QuoteMethod;
 import io.confluent.connect.jdbc.util.TableId;
@@ -32,241 +42,350 @@ import static org.junit.Assert.assertEquals;
 
 public class PostgreSqlDatabaseDialectTest extends BaseDialectTest<PostgreSqlDatabaseDialect> {
 
-  @Override
-  protected PostgreSqlDatabaseDialect createDialect() {
-    return new PostgreSqlDatabaseDialect(sourceConfigWithUrl("jdbc:postgresql://something"));
-  }
+    @Override
+    protected PostgreSqlDatabaseDialect createDialect() {
+        return new PostgreSqlDatabaseDialect(sourceConfigWithUrl("jdbc:postgresql://node1:5432"));
+    }
 
-  @Test
-  public void shouldMapPrimitiveSchemaTypeToSqlTypes() {
-    assertPrimitiveMapping(Type.INT8, "SMALLINT");
-    assertPrimitiveMapping(Type.INT16, "SMALLINT");
-    assertPrimitiveMapping(Type.INT32, "INT");
-    assertPrimitiveMapping(Type.INT64, "BIGINT");
-    assertPrimitiveMapping(Type.FLOAT32, "REAL");
-    assertPrimitiveMapping(Type.FLOAT64, "DOUBLE PRECISION");
-    assertPrimitiveMapping(Type.BOOLEAN, "BOOLEAN");
-    assertPrimitiveMapping(Type.BYTES, "BYTEA");
-    assertPrimitiveMapping(Type.STRING, "TEXT");
-  }
+    @Test
+    public void shouldMapPrimitiveSchemaTypeToSqlTypes() {
+        assertPrimitiveMapping(Type.INT8, "SMALLINT");
+        assertPrimitiveMapping(Type.INT16, "SMALLINT");
+        assertPrimitiveMapping(Type.INT32, "INT");
+        assertPrimitiveMapping(Type.INT64, "BIGINT");
+        assertPrimitiveMapping(Type.FLOAT32, "REAL");
+        assertPrimitiveMapping(Type.FLOAT64, "DOUBLE PRECISION");
+        assertPrimitiveMapping(Type.BOOLEAN, "BOOLEAN");
+        assertPrimitiveMapping(Type.BYTES, "BYTEA");
+        assertPrimitiveMapping(Type.STRING, "TEXT");
+    }
 
-  @Test
-  public void shouldMapDecimalSchemaTypeToDecimalSqlType() {
-    assertDecimalMapping(0, "DECIMAL");
-    assertDecimalMapping(3, "DECIMAL");
-    assertDecimalMapping(4, "DECIMAL");
-    assertDecimalMapping(5, "DECIMAL");
-  }
+    @Test
+    public void run() throws Exception {
+        // 获取所有中文（utf-8 中文编码范围：u4e00-u9fa5）
+        int start;
+        int end;
 
-  @Test
-  public void shouldMapDataTypes() {
-    verifyDataTypeMapping("SMALLINT", Schema.INT8_SCHEMA);
-    verifyDataTypeMapping("SMALLINT", Schema.INT16_SCHEMA);
-    verifyDataTypeMapping("INT", Schema.INT32_SCHEMA);
-    verifyDataTypeMapping("BIGINT", Schema.INT64_SCHEMA);
-    verifyDataTypeMapping("REAL", Schema.FLOAT32_SCHEMA);
-    verifyDataTypeMapping("DOUBLE PRECISION", Schema.FLOAT64_SCHEMA);
-    verifyDataTypeMapping("BOOLEAN", Schema.BOOLEAN_SCHEMA);
-    verifyDataTypeMapping("TEXT", Schema.STRING_SCHEMA);
-    verifyDataTypeMapping("BYTEA", Schema.BYTES_SCHEMA);
-    verifyDataTypeMapping("DECIMAL", Decimal.schema(0));
-    verifyDataTypeMapping("DATE", Date.SCHEMA);
-    verifyDataTypeMapping("TIME", Time.SCHEMA);
-    verifyDataTypeMapping("TIMESTAMP", Timestamp.SCHEMA);
-  }
+        start = Integer.parseInt("0", 16);
+        end = Integer.parseInt("7FFFFFFF", 16);
+        chineses(start, end);
 
-  @Test
-  public void shouldMapDateSchemaTypeToDateSqlType() {
-    assertDateMapping("DATE");
-  }
+//        start = Integer.parseInt("4E00", 16);
+//        end = Integer.parseInt("9FBB", 16);
+//        chineses(start, end);
 
-  @Test
-  public void shouldMapTimeSchemaTypeToTimeSqlType() {
-    assertTimeMapping("TIME");
-  }
+//        start = Integer.parseInt("3400", 16);
+//        end = Integer.parseInt("4DB5", 16);
+//        chineses(start, end);
+//
+//        start = Integer.parseInt("20001", 16);
+//        end = Integer.parseInt("2A6D6", 16);
+//        chineses(start, end);
+//
+//        start = Integer.parseInt("F900", 16);
+//        end = Integer.parseInt("FA2D", 16);
+//        chineses(start, end);
+//
+//        start = Integer.parseInt("FA30", 16);
+//        end = Integer.parseInt("FA6A", 16);
+//        chineses(start, end);
+//
+//        start = Integer.parseInt("FA70", 16);
+//        end = Integer.parseInt("FAD9", 16);
+//        chineses(start, end);
+//
+//        start = Integer.parseInt("2F800", 16);
+//        end = Integer.parseInt("2FA1D", 16);
+//        chineses(start, end);
 
-  @Test
-  public void shouldMapTimestampSchemaTypeToTimestampSqlType() {
-    assertTimestampMapping("TIMESTAMP");
-  }
+    }
 
-  @Test
-  public void shouldBuildCreateQueryStatement() {
-    assertEquals(
-        "CREATE TABLE \"myTable\" (\n"
-        + "\"c1\" INT NOT NULL,\n"
-        + "\"c2\" BIGINT NOT NULL,\n"
-        + "\"c3\" TEXT NOT NULL,\n"
-        + "\"c4\" TEXT NULL,\n"
-        + "\"c5\" DATE DEFAULT '2001-03-15',\n"
-        + "\"c6\" TIME DEFAULT '00:00:00.000',\n"
-        + "\"c7\" TIMESTAMP DEFAULT '2001-03-15 00:00:00.000',\n"
-        + "\"c8\" DECIMAL NULL,\n"
-        + "PRIMARY KEY(\"c1\"))",
-        dialect.buildCreateTableStatement(tableId, sinkRecordFields)
-    );
 
-    quoteIdentfiiers = QuoteMethod.NEVER;
-    dialect = createDialect();
+    public void chineses(int start, int end) throws Exception {
 
-    assertEquals(
-        "CREATE TABLE myTable (\n"
-        + "c1 INT NOT NULL,\n"
-        + "c2 BIGINT NOT NULL,\n"
-        + "c3 TEXT NOT NULL,\n"
-        + "c4 TEXT NULL,\n"
-        + "c5 DATE DEFAULT '2001-03-15',\n"
-        + "c6 TIME DEFAULT '00:00:00.000',\n"
-        + "c7 TIMESTAMP DEFAULT '2001-03-15 00:00:00.000',\n"
-        + "c8 DECIMAL NULL,\n"
-        + "PRIMARY KEY(c1))",
-        dialect.buildCreateTableStatement(tableId, sinkRecordFields)
-    );
-  }
+        Map<String, String> properties = new HashMap<String, String>();
 
-  @Test
-  public void shouldBuildAlterTableStatement() {
-    assertEquals(
-        Arrays.asList(
-            "ALTER TABLE \"myTable\" \n"
-            + "ADD \"c1\" INT NOT NULL,\n"
-            + "ADD \"c2\" BIGINT NOT NULL,\n"
-            + "ADD \"c3\" TEXT NOT NULL,\n"
-            + "ADD \"c4\" TEXT NULL,\n"
-            + "ADD \"c5\" DATE DEFAULT '2001-03-15',\n"
-            + "ADD \"c6\" TIME DEFAULT '00:00:00.000',\n"
-            + "ADD \"c7\" TIMESTAMP DEFAULT '2001-03-15 00:00:00.000',\n"
-            + "ADD \"c8\" DECIMAL NULL"
-        ),
-        dialect.buildAlterTable(tableId, sinkRecordFields)
-    );
+        properties.put(JdbcSourceConnectorConfig.TOPIC_PREFIX_CONFIG, "postgres");
+        properties.put(JdbcSourceConnectorConfig.CONNECTION_URL_CONFIG, "jdbc:postgresql://node1:5432/aaaa");
+        properties.put(JdbcSourceConnectorConfig.CONNECTION_USER_CONFIG, "postgres");
+        properties.put(JdbcSourceConnectorConfig.CONNECTION_PASSWORD_CONFIG, "postgres");
+        properties.put(JdbcSourceConnectorConfig.TABLE_WHITELIST_CONFIG, "aaaa");
+        properties.put(JdbcSourceConnectorConfig.MODE_CONFIG, JdbcSourceConnectorConfig.MODE_BULK);
 
-    quoteIdentfiiers = QuoteMethod.NEVER;
-    dialect = createDialect();
 
-    assertEquals(
-        Arrays.asList(
-            "ALTER TABLE myTable \n"
-            + "ADD c1 INT NOT NULL,\n"
-            + "ADD c2 BIGINT NOT NULL,\n"
-            + "ADD c3 TEXT NOT NULL,\n"
-            + "ADD c4 TEXT NULL,\n"
-            + "ADD c5 DATE DEFAULT '2001-03-15',\n"
-            + "ADD c6 TIME DEFAULT '00:00:00.000',\n"
-            + "ADD c7 TIMESTAMP DEFAULT '2001-03-15 00:00:00.000',\n"
-            + "ADD c8 DECIMAL NULL"
-        ),
-        dialect.buildAlterTable(tableId, sinkRecordFields)
-    );
-  }
+        JdbcSourceConnectorConfig config = new JdbcSourceConnectorConfig(properties);
+        dialect = (PostgreSqlDatabaseDialect) DatabaseDialects.findBestFor(config.getString(JdbcSourceConnectorConfig.CONNECTION_URL_CONFIG), config);
+        System.out.println(config);
+        final int maxConnAttempts = config.getInt(JdbcSourceConnectorConfig.CONNECTION_ATTEMPTS_CONFIG);
+        final long retryBackoff = config.getLong(JdbcSourceConnectorConfig.CONNECTION_BACKOFF_CONFIG);
+        CachedConnectionProvider cachedConnectionProvider = new CachedConnectionProvider(dialect, maxConnAttempts, retryBackoff);
 
-  @Test
-  public void shouldBuildUpsertStatement() {
-    assertEquals(
-        "INSERT INTO \"myTable\" (\"id1\",\"id2\",\"columnA\",\"columnB\"," +
-        "\"columnC\",\"columnD\") VALUES (?,?,?,?,?,?) ON CONFLICT (\"id1\"," +
-        "\"id2\") DO UPDATE SET \"columnA\"=EXCLUDED" +
-        ".\"columnA\",\"columnB\"=EXCLUDED.\"columnB\",\"columnC\"=EXCLUDED" +
-        ".\"columnC\",\"columnD\"=EXCLUDED.\"columnD\"",
-        dialect.buildUpsertQueryStatement(tableId, pkColumns, columnsAtoD)
-    );
 
-    quoteIdentfiiers = QuoteMethod.NEVER;
-    dialect = createDialect();
+        PreparedStatement stmt;
+        String queryStr =
+                dialect.expressionBuilder().append("SELECT * FROM aaaa").toString();
+        stmt = dialect.createPreparedStatement(cachedConnectionProvider.getConnection(), queryStr);
 
-    assertEquals(
-        "INSERT INTO myTable (id1,id2,columnA,columnB," +
-        "columnC,columnD) VALUES (?,?,?,?,?,?) ON CONFLICT (id1," +
-        "id2) DO UPDATE SET columnA=EXCLUDED" +
-        ".columnA,columnB=EXCLUDED.columnB,columnC=EXCLUDED" +
-        ".columnC,columnD=EXCLUDED.columnD",
-        dialect.buildUpsertQueryStatement(tableId, pkColumns, columnsAtoD)
-    );
-  }
+//        ResultSet resultSet = stmt.executeQuery();
+//        System.out.println(resultSet);
+//        while (resultSet.next()) {
+//            System.out.printf("%-30.30s  %-30.30s%n", resultSet.getString("a"), resultSet.getString("b"));
+//        }
+//        Statement stmnt = null;
+//        stmnt = cachedConnectionProvider.getConnection().createStatement();
 
-  @Test
-  public void createOneColNoPk() {
-    verifyCreateOneColNoPk(
-        "CREATE TABLE \"myTable\" (" + System.lineSeparator() + "\"col1\" INT NOT NULL)");
-  }
 
-  @Test
-  public void createOneColOnePk() {
-    verifyCreateOneColOnePk(
-        "CREATE TABLE \"myTable\" (" + System.lineSeparator() + "\"pk1\" INT NOT NULL," +
-        System.lineSeparator() + "PRIMARY KEY(\"pk1\"))");
-  }
+        PreparedStatement ps = null;
 
-  @Test
-  public void createThreeColTwoPk() {
-    verifyCreateThreeColTwoPk(
-        "CREATE TABLE \"myTable\" (" + System.lineSeparator() + "\"pk1\" INT NOT NULL," +
-        System.lineSeparator() + "\"pk2\" INT NOT NULL," + System.lineSeparator() +
-        "\"col1\" INT NOT NULL," + System.lineSeparator() + "PRIMARY KEY(\"pk1\",\"pk2\"))");
+        String sql = "INSERT INTO aaaa (b,c,d) "
+                + "VALUES " + "(?,?,?)";
+        ;
+        ps = cachedConnectionProvider.getConnection().prepareStatement(sql);
 
-    quoteIdentfiiers = QuoteMethod.NEVER;
-    dialect = createDialect();
+        int insertCount = 0;
 
-    verifyCreateThreeColTwoPk(
-        "CREATE TABLE myTable (" + System.lineSeparator() + "pk1 INT NOT NULL," +
-        System.lineSeparator() + "pk2 INT NOT NULL," + System.lineSeparator() +
-        "col1 INT NOT NULL," + System.lineSeparator() + "PRIMARY KEY(pk1,pk2))");
-  }
+        ps.executeBatch();
+        StringBuilder sb = new StringBuilder();
+        final int batchSize = 1000;
+        for (int i = start; i <= end; i++) {
+            System.out.println((char) i);
+            ps.setString(1, (char) i + "");
+            ps.setString(2, Integer.toHexString(i));
+            ps.setInt(3, i);
+            ps.addBatch();
+            if (++insertCount % batchSize == 0) {
+                ps.executeBatch();
+            }
+        }
+        ps.executeBatch();
+        ps.close();
+        cachedConnectionProvider.getConnection().close();
+        // 将文字写入文本中
+//        File file = new File("chinese.txt");
+//        file.createNewFile();
+//        FileWriter writer = new FileWriter(file);
+//        writer.write(sb.toString());
+//        writer.close();
+//        System.out.println("文字已写入当前工程Chinese.txt中，请刷新工程查看。");
+    }
 
-  @Test
-  public void alterAddOneCol() {
-    verifyAlterAddOneCol("ALTER TABLE \"myTable\" ADD \"newcol1\" INT NULL");
-  }
+    @Test
+    public void shouldMapDecimalSchemaTypeToDecimalSqlType() {
+        assertDecimalMapping(0, "DECIMAL");
+        assertDecimalMapping(3, "DECIMAL");
+        assertDecimalMapping(4, "DECIMAL");
+        assertDecimalMapping(5, "DECIMAL");
+    }
 
-  @Test
-  public void alterAddTwoCol() {
-    verifyAlterAddTwoCols(
-        "ALTER TABLE \"myTable\" " + System.lineSeparator() + "ADD \"newcol1\" INT NULL," +
-        System.lineSeparator() + "ADD \"newcol2\" INT DEFAULT 42");
-  }
+    @Test
+    public void shouldMapDataTypes() {
+        verifyDataTypeMapping("SMALLINT", Schema.INT8_SCHEMA);
+        verifyDataTypeMapping("SMALLINT", Schema.INT16_SCHEMA);
+        verifyDataTypeMapping("INT", Schema.INT32_SCHEMA);
+        verifyDataTypeMapping("BIGINT", Schema.INT64_SCHEMA);
+        verifyDataTypeMapping("REAL", Schema.FLOAT32_SCHEMA);
+        verifyDataTypeMapping("DOUBLE PRECISION", Schema.FLOAT64_SCHEMA);
+        verifyDataTypeMapping("BOOLEAN", Schema.BOOLEAN_SCHEMA);
+        verifyDataTypeMapping("TEXT", Schema.STRING_SCHEMA);
+        verifyDataTypeMapping("BYTEA", Schema.BYTES_SCHEMA);
+        verifyDataTypeMapping("DECIMAL", Decimal.schema(0));
+        verifyDataTypeMapping("DATE", Date.SCHEMA);
+        verifyDataTypeMapping("TIME", Time.SCHEMA);
+        verifyDataTypeMapping("TIMESTAMP", Timestamp.SCHEMA);
+    }
 
-  @Test
-  public void upsert() {
-    TableId customer = tableId("Customer");
-    assertEquals(
-        "INSERT INTO \"Customer\" (\"id\",\"name\",\"salary\",\"address\") " +
-         "VALUES (?,?,?,?) ON CONFLICT (\"id\") DO UPDATE SET \"name\"=EXCLUDED.\"name\"," +
-         "\"salary\"=EXCLUDED.\"salary\",\"address\"=EXCLUDED.\"address\"",
-        dialect.buildUpsertQueryStatement(
-            customer,
-            columns(customer, "id"),
-            columns(customer, "name", "salary", "address")
-        )
-    );
+    @Test
+    public void shouldMapDateSchemaTypeToDateSqlType() {
+        assertDateMapping("DATE");
+    }
 
-    quoteIdentfiiers = QuoteMethod.NEVER;
-    dialect = createDialect();
+    @Test
+    public void shouldMapTimeSchemaTypeToTimeSqlType() {
+        assertTimeMapping("TIME");
+    }
 
-    assertEquals(
-        "INSERT INTO Customer (id,name,salary,address) " +
-        "VALUES (?,?,?,?) ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name," +
-        "salary=EXCLUDED.salary,address=EXCLUDED.address",
-        dialect.buildUpsertQueryStatement(
-            customer,
-            columns(customer, "id"),
-            columns(customer, "name", "salary", "address")
-        )
-    );
-  }
+    @Test
+    public void shouldMapTimestampSchemaTypeToTimestampSqlType() {
+        assertTimestampMapping("TIMESTAMP");
+    }
 
-  @Test
-  public void shouldSanitizeUrlWithoutCredentialsInProperties() {
-    assertSanitizedUrl(
-        "jdbc:postgresql://localhost/test?user=fred&ssl=true",
-        "jdbc:postgresql://localhost/test?user=fred&ssl=true"
-    );
-  }
+    @Test
+    public void shouldBuildCreateQueryStatement() {
+        assertEquals(
+                "CREATE TABLE \"myTable\" (\n"
+                        + "\"c1\" INT NOT NULL,\n"
+                        + "\"c2\" BIGINT NOT NULL,\n"
+                        + "\"c3\" TEXT NOT NULL,\n"
+                        + "\"c4\" TEXT NULL,\n"
+                        + "\"c5\" DATE DEFAULT '2001-03-15',\n"
+                        + "\"c6\" TIME DEFAULT '00:00:00.000',\n"
+                        + "\"c7\" TIMESTAMP DEFAULT '2001-03-15 00:00:00.000',\n"
+                        + "\"c8\" DECIMAL NULL,\n"
+                        + "PRIMARY KEY(\"c1\"))",
+                dialect.buildCreateTableStatement(tableId, sinkRecordFields)
+        );
 
-  @Test
-  public void shouldSanitizeUrlWithCredentialsInUrlProperties() {
-    assertSanitizedUrl(
-        "jdbc:postgresql://localhost/test?user=fred&password=secret&ssl=true",
-        "jdbc:postgresql://localhost/test?user=fred&password=****&ssl=true"
-    );
-  }
+        quoteIdentfiiers = QuoteMethod.NEVER;
+        dialect = createDialect();
+
+        assertEquals(
+                "CREATE TABLE myTable (\n"
+                        + "c1 INT NOT NULL,\n"
+                        + "c2 BIGINT NOT NULL,\n"
+                        + "c3 TEXT NOT NULL,\n"
+                        + "c4 TEXT NULL,\n"
+                        + "c5 DATE DEFAULT '2001-03-15',\n"
+                        + "c6 TIME DEFAULT '00:00:00.000',\n"
+                        + "c7 TIMESTAMP DEFAULT '2001-03-15 00:00:00.000',\n"
+                        + "c8 DECIMAL NULL,\n"
+                        + "PRIMARY KEY(c1))",
+                dialect.buildCreateTableStatement(tableId, sinkRecordFields)
+        );
+    }
+
+    @Test
+    public void shouldBuildAlterTableStatement() {
+        assertEquals(
+                Arrays.asList(
+                        "ALTER TABLE \"myTable\" \n"
+                                + "ADD \"c1\" INT NOT NULL,\n"
+                                + "ADD \"c2\" BIGINT NOT NULL,\n"
+                                + "ADD \"c3\" TEXT NOT NULL,\n"
+                                + "ADD \"c4\" TEXT NULL,\n"
+                                + "ADD \"c5\" DATE DEFAULT '2001-03-15',\n"
+                                + "ADD \"c6\" TIME DEFAULT '00:00:00.000',\n"
+                                + "ADD \"c7\" TIMESTAMP DEFAULT '2001-03-15 00:00:00.000',\n"
+                                + "ADD \"c8\" DECIMAL NULL"
+                ),
+                dialect.buildAlterTable(tableId, sinkRecordFields)
+        );
+
+        quoteIdentfiiers = QuoteMethod.NEVER;
+        dialect = createDialect();
+
+        assertEquals(
+                Arrays.asList(
+                        "ALTER TABLE myTable \n"
+                                + "ADD c1 INT NOT NULL,\n"
+                                + "ADD c2 BIGINT NOT NULL,\n"
+                                + "ADD c3 TEXT NOT NULL,\n"
+                                + "ADD c4 TEXT NULL,\n"
+                                + "ADD c5 DATE DEFAULT '2001-03-15',\n"
+                                + "ADD c6 TIME DEFAULT '00:00:00.000',\n"
+                                + "ADD c7 TIMESTAMP DEFAULT '2001-03-15 00:00:00.000',\n"
+                                + "ADD c8 DECIMAL NULL"
+                ),
+                dialect.buildAlterTable(tableId, sinkRecordFields)
+        );
+    }
+
+    @Test
+    public void shouldBuildUpsertStatement() {
+        assertEquals(
+                "INSERT INTO \"myTable\" (\"id1\",\"id2\",\"columnA\",\"columnB\"," +
+                        "\"columnC\",\"columnD\") VALUES (?,?,?,?,?,?) ON CONFLICT (\"id1\"," +
+                        "\"id2\") DO UPDATE SET \"columnA\"=EXCLUDED" +
+                        ".\"columnA\",\"columnB\"=EXCLUDED.\"columnB\",\"columnC\"=EXCLUDED" +
+                        ".\"columnC\",\"columnD\"=EXCLUDED.\"columnD\"",
+                dialect.buildUpsertQueryStatement(tableId, pkColumns, columnsAtoD)
+        );
+
+        quoteIdentfiiers = QuoteMethod.NEVER;
+        dialect = createDialect();
+
+        assertEquals(
+                "INSERT INTO myTable (id1,id2,columnA,columnB," +
+                        "columnC,columnD) VALUES (?,?,?,?,?,?) ON CONFLICT (id1," +
+                        "id2) DO UPDATE SET columnA=EXCLUDED" +
+                        ".columnA,columnB=EXCLUDED.columnB,columnC=EXCLUDED" +
+                        ".columnC,columnD=EXCLUDED.columnD",
+                dialect.buildUpsertQueryStatement(tableId, pkColumns, columnsAtoD)
+        );
+    }
+
+    @Test
+    public void createOneColNoPk() {
+        verifyCreateOneColNoPk(
+                "CREATE TABLE \"myTable\" (" + System.lineSeparator() + "\"col1\" INT NOT NULL)");
+    }
+
+    @Test
+    public void createOneColOnePk() {
+        verifyCreateOneColOnePk(
+                "CREATE TABLE \"myTable\" (" + System.lineSeparator() + "\"pk1\" INT NOT NULL," +
+                        System.lineSeparator() + "PRIMARY KEY(\"pk1\"))");
+    }
+
+    @Test
+    public void createThreeColTwoPk() {
+        verifyCreateThreeColTwoPk(
+                "CREATE TABLE \"myTable\" (" + System.lineSeparator() + "\"pk1\" INT NOT NULL," +
+                        System.lineSeparator() + "\"pk2\" INT NOT NULL," + System.lineSeparator() +
+                        "\"col1\" INT NOT NULL," + System.lineSeparator() + "PRIMARY KEY(\"pk1\",\"pk2\"))");
+
+        quoteIdentfiiers = QuoteMethod.NEVER;
+        dialect = createDialect();
+
+        verifyCreateThreeColTwoPk(
+                "CREATE TABLE myTable (" + System.lineSeparator() + "pk1 INT NOT NULL," +
+                        System.lineSeparator() + "pk2 INT NOT NULL," + System.lineSeparator() +
+                        "col1 INT NOT NULL," + System.lineSeparator() + "PRIMARY KEY(pk1,pk2))");
+    }
+
+    @Test
+    public void alterAddOneCol() {
+        verifyAlterAddOneCol("ALTER TABLE \"myTable\" ADD \"newcol1\" INT NULL");
+    }
+
+    @Test
+    public void alterAddTwoCol() {
+        verifyAlterAddTwoCols(
+                "ALTER TABLE \"myTable\" " + System.lineSeparator() + "ADD \"newcol1\" INT NULL," +
+                        System.lineSeparator() + "ADD \"newcol2\" INT DEFAULT 42");
+    }
+
+    @Test
+    public void upsert() {
+        TableId customer = tableId("Customer");
+        assertEquals(
+                "INSERT INTO \"Customer\" (\"id\",\"name\",\"salary\",\"address\") " +
+                        "VALUES (?,?,?,?) ON CONFLICT (\"id\") DO UPDATE SET \"name\"=EXCLUDED.\"name\"," +
+                        "\"salary\"=EXCLUDED.\"salary\",\"address\"=EXCLUDED.\"address\"",
+                dialect.buildUpsertQueryStatement(
+                        customer,
+                        columns(customer, "id"),
+                        columns(customer, "name", "salary", "address")
+                )
+        );
+
+        quoteIdentfiiers = QuoteMethod.NEVER;
+        dialect = createDialect();
+
+        assertEquals(
+                "INSERT INTO Customer (id,name,salary,address) " +
+                        "VALUES (?,?,?,?) ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name," +
+                        "salary=EXCLUDED.salary,address=EXCLUDED.address",
+                dialect.buildUpsertQueryStatement(
+                        customer,
+                        columns(customer, "id"),
+                        columns(customer, "name", "salary", "address")
+                )
+        );
+    }
+
+    @Test
+    public void shouldSanitizeUrlWithoutCredentialsInProperties() {
+        assertSanitizedUrl(
+                "jdbc:postgresql://localhost/test?user=fred&ssl=true",
+                "jdbc:postgresql://localhost/test?user=fred&ssl=true"
+        );
+    }
+
+    @Test
+    public void shouldSanitizeUrlWithCredentialsInUrlProperties() {
+        assertSanitizedUrl(
+                "jdbc:postgresql://localhost/test?user=fred&password=secret&ssl=true",
+                "jdbc:postgresql://localhost/test?user=fred&password=****&ssl=true"
+        );
+    }
 }
