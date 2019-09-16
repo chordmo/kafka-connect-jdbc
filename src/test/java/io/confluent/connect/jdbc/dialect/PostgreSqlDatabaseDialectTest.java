@@ -28,6 +28,9 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
@@ -61,13 +64,53 @@ public class PostgreSqlDatabaseDialectTest extends BaseDialectTest<PostgreSqlDat
     }
 
     @Test
+    public void bytesTest() throws Exception {
+        String str = "\uD86F\uDE24";
+        System.out.println(str);
+        byte[] b = str.getBytes();
+        System.out.println("Array " + b);
+        System.out.println("Array as String" + Arrays.toString(b));
+//        𫸤
+//        Array [B@5d624da6
+//        Array as String[-16, -85, -72, -92]
+    }
+
+    @Test
+    public void bytesTest2() throws Exception {
+//        String str = "\uD86F\uDE24";
+//        byte[] b = str.getBytes();
+//        byte[] b = BigInteger.valueOf(0x4e00).toByteArray();
+//
+
+//        ByteBuffer b = ByteBuffer.allocate(4);
+//        b.putInt(0x4e00);
+//
+//        byte[] result = b.array();
+
+
+        char[] result = Character.toChars(0x2BE24);
+
+        String s = new String(result, 0, result.length);
+
+
+        System.out.println(s);
+        byte[] b = s.getBytes();
+        System.out.println("Array " + b);
+        System.out.println("Array as String" + Arrays.toString(b));
+//        𫸤
+//        Array [B@5d624da6
+//        Array as String[-16, -85, -72, -92]
+    }
+
+    @Test
     public void run() throws Exception {
         // 获取所有中文（utf-8 中文编码范围：u4e00-u9fa5）
         int start;
         int end;
 
-        start = Integer.parseInt("0", 16);
-        end = Integer.parseInt("7FFFFFFF", 16);
+        start = Integer.parseInt("0000", 16);
+//        start = Integer.parseInt("1000", 16);
+        end = Integer.parseInt("10FFFF", 16);
         chineses(start, end);
 
 //        start = Integer.parseInt("4E00", 16);
@@ -139,23 +182,39 @@ public class PostgreSqlDatabaseDialectTest extends BaseDialectTest<PostgreSqlDat
 
         String sql = "INSERT INTO aaaa (b,c,d) "
                 + "VALUES " + "(?,?,?)";
-        ;
+
         ps = cachedConnectionProvider.getConnection().prepareStatement(sql);
 
         int insertCount = 0;
 
         ps.executeBatch();
         StringBuilder sb = new StringBuilder();
-        final int batchSize = 1000;
+        final int batchSize = 100000;
         for (int i = start; i <= end; i++) {
-            System.out.println((char) i);
-            ps.setString(1, (char) i + "");
-            ps.setString(2, Integer.toHexString(i));
-            ps.setInt(3, i);
-            ps.addBatch();
-            if (++insertCount % batchSize == 0) {
-                ps.executeBatch();
+
+            System.out.println(i);
+//            char a = (char) i;
+            String toHexString = Integer.toHexString(i);
+            final char[] chars = Character.toChars(i);
+//            String s = String.valueOf(chars);
+            String s = new String(chars, 0, chars.length);
+
+//            System.out.println(s);
+            //
+            if (chars[0] != '\0' && s != null && !s.equals("")) {
+
+//                final String s = new String(chars);
+                ps.setString(1, s);
+//                ps.setString(1, (char) i + "");
+                ps.setString(2, toHexString);
+                ps.setInt(3, i);
+                ps.addBatch();
+                if (++insertCount % batchSize == 0) {
+                    ps.executeBatch();
+                }
             }
+
+
         }
         ps.executeBatch();
         ps.close();
@@ -167,6 +226,15 @@ public class PostgreSqlDatabaseDialectTest extends BaseDialectTest<PostgreSqlDat
 //        writer.write(sb.toString());
 //        writer.close();
 //        System.out.println("文字已写入当前工程Chinese.txt中，请刷新工程查看。");
+    }
+
+    public static boolean isUTF8(String key) {
+        try {
+            key.getBytes("utf-8");
+            return true;
+        } catch (UnsupportedEncodingException e) {
+            return false;
+        }
     }
 
     @Test
