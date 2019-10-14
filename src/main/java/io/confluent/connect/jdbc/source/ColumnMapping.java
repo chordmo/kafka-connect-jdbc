@@ -37,14 +37,14 @@ public class ColumnMapping {
   /**
    * Create the column mapping.
    *
-   * @param columnDefn   the definition of the column; may not be null
+   * @param columnDefn the definition of the column; may not be null
    * @param columnNumber the 1-based number of the column within the result set; must be positive
-   * @param field        the corresponding {@link Field} within the {@link Schema}; may not be null
+   * @param field the corresponding {@link Field} within the {@link Schema}; may not be null
    */
   public ColumnMapping(
-      ColumnDefinition columnDefn,
-      int columnNumber,
-      Field field
+        ColumnDefinition columnDefn,
+        int columnNumber,
+        Field field
   ) {
     assert columnDefn != null;
     assert field != null;
@@ -96,7 +96,7 @@ public class ColumnMapping {
     if (obj instanceof ColumnMapping) {
       ColumnMapping that = (ColumnMapping) obj;
       return this.columnNumber == that.columnNumber && Objects.equals(
-          this.columnDefn, that.columnDefn) && Objects.equals(this.field, that.field);
+            this.columnDefn, that.columnDefn) && Objects.equals(this.field, that.field);
     }
     return false;
   }

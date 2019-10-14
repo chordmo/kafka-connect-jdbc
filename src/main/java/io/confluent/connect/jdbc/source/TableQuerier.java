@@ -28,11 +28,12 @@ import io.confluent.connect.jdbc.dialect.DatabaseDialect;
 import io.confluent.connect.jdbc.util.TableId;
 
 /**
- * TableQuerier executes queries against a specific table. Implementations handle different types
- * of queries: periodic bulk loading, incremental loads using auto incrementing IDs, incremental
- * loads using timestamps, etc.
+ * TableQuerier executes queries against a specific table. Implementations handle different types of
+ * queries: periodic bulk loading, incremental loads using auto incrementing IDs, incremental loads
+ * using timestamps, etc.
  */
 abstract class TableQuerier implements Comparable<TableQuerier> {
+
   public enum QueryMode {
     TABLE, // Copying whole tables, with queries constructed automatically
     QUERY // User-specified query
@@ -91,7 +92,7 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
       stmt = getOrCreatePreparedStatement(db);
       resultSet = executeQuery();
       String schemaName = tableId != null ? tableId.tableName() : null; // backwards compatible
-      schemaMapping = SchemaMapping.create(schemaName, resultSet.getMetaData(), dialect);
+      schemaMapping = SchemaMapping.create(tableId, resultSet.getMetaData(), dialect);
     }
   }
 

@@ -72,7 +72,7 @@ public class JdbcSourceConnector extends SourceConnector {
       config = new JdbcSourceConnectorConfig(configProperties);
     } catch (ConfigException e) {
       throw new ConnectException("Couldn't start JdbcSourceConnector due to configuration error",
-                                 e);
+          e);
     }
 
     final String dbUrl = config.getString(JdbcSourceConnectorConfig.CONNECTION_URL_CONFIG);
@@ -103,14 +103,14 @@ public class JdbcSourceConnector extends SourceConnector {
 
     if (whitelistSet != null && blacklistSet != null) {
       throw new ConnectException(JdbcSourceConnectorConfig.TABLE_WHITELIST_CONFIG + " and "
-                                 + JdbcSourceConnectorConfig.TABLE_BLACKLIST_CONFIG + " are "
-                                 + "exclusive.");
+          + JdbcSourceConnectorConfig.TABLE_BLACKLIST_CONFIG + " are "
+          + "exclusive.");
     }
     String query = config.getString(JdbcSourceConnectorConfig.QUERY_CONFIG);
     if (!query.isEmpty()) {
       if (whitelistSet != null || blacklistSet != null) {
         throw new ConnectException(JdbcSourceConnectorConfig.QUERY_CONFIG + " may not be combined"
-                                   + " with whole-table copying settings.");
+            + " with whole-table copying settings.");
       }
       // Force filtering out the entire set of tables since the one task we'll generate is for the
       // query.

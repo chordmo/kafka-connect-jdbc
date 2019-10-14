@@ -15,6 +15,7 @@
 
 package io.confluent.connect.jdbc.source;
 
+import io.confluent.connect.jdbc.util.TableId;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
@@ -40,8 +41,8 @@ import io.confluent.connect.jdbc.util.ColumnId;
  * FieldSetter} functions (one for each column in the result set), and the caller should iterate
  * over these and call the function with the result set.
  *
- * <p>This mapping contains the {@link ColumnConverter} functions that should be called for each row
- * in the result set. and these are exposed to users of this class via the {@link FieldSetter}
+ * <p>This mapping contains the {@link ColumnConverter} functions that should be called for each
+ * row in the result set. and these are exposed to users of this class via the {@link FieldSetter}
  * function.
  */
 public final class SchemaMapping {
@@ -49,18 +50,25 @@ public final class SchemaMapping {
   /**
    * Convert the result set into a {@link Schema}.
    *
-   * @param schemaName the name of the schema; may be null
-   * @param metadata   the result set metadata; never null
-   * @param dialect    the dialect for the source database; never null
+   * @param tableId the name of the TableId; may be null
+   * @param metadata the result set metadata; never null
+   * @param dialect the dialect for the source database; never null
    * @return the schema mapping; never null
    * @throws SQLException if there is a problem accessing the result set metadata
    */
   public static SchemaMapping create(
-      String schemaName,
+      TableId tableId,
       ResultSetMetaData metadata,
       DatabaseDialect dialect
   ) throws SQLException {
-    Map<ColumnId, ColumnDefinition> colDefns = dialect.describeColumns(metadata);
+    String schemaName = tableId.schemaName();
+    String dialectName = dialect.name();
+    Map<ColumnId, ColumnDefinition> colDefns;
+    if (dialectName.equals("Hive")) {
+      colDefns = dialect.describeColumns(metadata, tableId);
+    } else {
+      colDefns = dialect.describeColumns(metadata);
+    }
     Map<String, ColumnConverter> colConvertersByFieldName = new LinkedHashMap<>();
     SchemaBuilder builder = SchemaBuilder.struct().name(schemaName);
     int columnNumber = 0;
@@ -146,11 +154,11 @@ public final class SchemaMapping {
      * Call the {@link ColumnConverter converter} on the supplied {@link ResultSet} and set the
      * corresponding {@link #field() field} on the supplied {@link Struct}.
      *
-     * @param struct    the struct whose field is to be set with the converted value from the result
-     *                  set; may not be null
+     * @param struct the struct whose field is to be set with the converted value from the result
+     * set; may not be null
      * @param resultSet the result set positioned at the row to be processed; may not be null
      * @throws SQLException if there is an error accessing the result set
-     * @throws IOException  if there is an error accessing a streaming value from the result set
+     * @throws IOException if there is an error accessing a streaming value from the result set
      */
     void setField(
         Struct struct,

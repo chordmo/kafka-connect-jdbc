@@ -646,6 +646,13 @@ public class GenericDatabaseDialect implements DatabaseDialect {
     return result;
   }
 
+
+  @Override
+  public Map<ColumnId, ColumnDefinition> describeColumns(ResultSetMetaData metadata,
+      TableId tableId) throws SQLException {
+    return null;
+  }
+
   /**
    * Create a definition for the specified column in the result set.
    *

@@ -161,7 +161,7 @@ public class IdentifierRules {
           }
         }
       }
-      parts.add(segment);
+      parts.add(segment.trim());
     } while (fqn.length() > 0);
     return parts;
   }
